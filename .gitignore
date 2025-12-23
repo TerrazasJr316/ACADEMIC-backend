@@ -1,0 +1,76 @@
+# ==========================================
+# 1. Dependencias y Compilación (GENERADO)
+# ==========================================
+# La carpeta gigante de librerías (se regenera con npm install)
+/node_modules
+
+# El código compilado JS para producción (se regenera con npm run build)
+/dist
+/build
+
+# Archivos de caché de TypeScript (acelera la compilación incremental)
+*.tsbuildinfo
+
+# ==========================================
+# 2. Seguridad y Variables de Entorno (CRÍTICO)
+# ==========================================
+# NUNCA subir claves reales
+.env
+.env.development
+.env.test
+.env.production
+.env.local
+.env.*
+
+# EXCEPCIÓN: ¡Sí permitir el archivo de ejemplo! 
+# (Tus compañeros copiarán este archivo y le pondrán sus propias claves)
+!.env.example
+!.env.template
+
+# ==========================================
+# 3. Docker y Base de Datos Local
+# ==========================================
+# Si mapeas volúmenes de DB en tu proyecto para no perder datos locales
+postgres_data/
+pgdata/
+mysql_data/
+mongo_data/
+
+# Logs de npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# 4. Sistema Operativo y Archivos Basura
+# ==========================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ==========================================
+# 5. Tests y Cobertura
+# ==========================================
+/coverage
+/.nyc_output
+
+# ==========================================
+# 6. IDEs y Editores (Configuración personal)
+# ==========================================
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# VSCode: Ignorar todo EXCEPTO la config compartida del equipo
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
