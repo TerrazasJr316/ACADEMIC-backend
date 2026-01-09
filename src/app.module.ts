@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CoreModule } from './core/core.module';
@@ -10,7 +11,25 @@ import { StudentModule } from './student/student.module';
 import { SharedModule } from './shared/shared.module';
 
 @Module({
-  imports: [CoreModule, AuthModule, TenantsModule, AdminModule, TeacherModule, StudentModule, SharedModule],
+  imports: [
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'admin',
+      password: 'root',
+      database: 'academic_saas',
+      autoLoadEntities: true,
+      synchronize: true,
+    }),
+    CoreModule,
+    AuthModule,
+    TenantsModule,
+    AdminModule,
+    TeacherModule,
+    StudentModule,
+    SharedModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
