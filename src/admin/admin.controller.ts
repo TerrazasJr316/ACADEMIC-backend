@@ -20,7 +20,6 @@ export class AdminController {
     return this.adminService.findAll();
   }
 
-  // Actualizado para la modal "Editar Grupo"
   @Patch('groups/:id')
   updateGroup(@Param('id') id: string, @Body() updateDto: any) {
     const updated = this.adminService.update(id, updateDto);
@@ -28,12 +27,66 @@ export class AdminController {
     return updated;
   }
 
-  // Actualizado para el enlace "Eliminar grupo"
   @Delete('groups/:id')
   removeGroup(@Param('id') id: string) {
     const deleted = this.adminService.remove(id);
     if (!deleted) throw new NotFoundException('No se pudo eliminar el grupo');
     return { message: 'Grupo eliminado con éxito' };
+  }
+
+  // --- SECCIÓN: ESTUDIANTES ---
+
+  @Get('groups/:groupId/students')
+  getStudents(@Param('groupId') groupId: string) {
+    const students = this.adminService.getStudentsByGroup(groupId);
+    if (!students) throw new NotFoundException('No se encontraron alumnos');
+    return students;
+  }
+
+  @Post('students')
+  addStudent(@Body() dto: any) {
+    return this.adminService.createStudent(dto);
+  }
+
+  // NUEVO: Obtiene el perfil detallado para las pestañas de Info, Pagos y Solicitudes
+  @Get('students/:id')
+  getStudentProfile(@Param('id') id: string) {
+    const profile = this.adminService.getStudentById(id);
+    if (!profile) throw new NotFoundException('Alumno no encontrado');
+    return profile;
+  }
+
+  // NUEVO: Ruta para la modal "Editar Perfil de Alumno"
+  @Patch('students/:id')
+  updateStudent(@Param('id') id: string, @Body() dto: any) {
+    const updated = this.adminService.updateStudent(id, dto);
+    if (!updated) throw new NotFoundException('No se pudo actualizar el perfil');
+    return updated;
+  }
+
+  @Get('groups/:groupId/export-students-pdf')
+  @Header('Content-Type', 'application/pdf')
+  async exportStudentList(@Param('groupId') groupId: string, @Res() res: Response) {
+    const buffer = await this.adminService.getStudentListPDF(groupId);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=lista_alumnos_${groupId}.pdf`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
+  // NUEVO: Botón "Descargar Historial" en PDF dentro del perfil
+  @Get('students/:id/export-history-pdf')
+  @Header('Content-Type', 'application/pdf')
+  async exportStudentHistory(@Param('id') id: string, @Res() res: Response) {
+    const buffer = await this.adminService.getStudentHistoryPDF(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=historial_academico_${id}.pdf`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
   }
 
   // --- SECCIÓN: MENSAJES ---
@@ -58,7 +111,6 @@ export class AdminController {
     return this.adminService.createPlan(dto);
   }
 
-  // Ruta para la modal "Editar Plan"
   @Patch('plans/:id')
   updatePlan(@Param('id') id: string, @Body() dto: any) {
     const updated = this.adminService.updatePlan(id, dto);
@@ -66,7 +118,6 @@ export class AdminController {
     return updated;
   }
 
-  // Ruta para eliminar Plan
   @Delete('plans/:id')
   removePlan(@Param('id') id: string) {
     const deleted = this.adminService.removePlan(id);
@@ -85,7 +136,6 @@ export class AdminController {
     return this.adminService.createSubject(dto);
   }
 
-  // Ruta para la modal "Editar Materia"
   @Patch('subjects/:id')
   updateSubject(@Param('id') id: string, @Body() dto: any) {
     const updated = this.adminService.updateSubject(id, dto);
@@ -93,7 +143,6 @@ export class AdminController {
     return updated;
   }
 
-  // Ruta para eliminar Materia
   @Delete('subjects/:id')
   removeSubject(@Param('id') id: string) {
     const deleted = this.adminService.removeSubject(id);
@@ -116,13 +165,11 @@ export class AdminController {
   @Header('Content-Disposition', 'attachment; filename=reporte_academico.pdf')
   async exportPDF(@Body() queryDto: ReportQueryDto, @Res() res: Response) {
     const buffer = await this.adminService.getReportPDF(queryDto);
-    
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': 'attachment; filename=reporte_academico.pdf',
       'Content-Length': buffer.length,
     });
-
     res.end(buffer);
   }
 }

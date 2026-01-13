@@ -29,6 +29,29 @@ export interface ISubject {
   planId: string;
 }
 
+// INTERFAZ AMPLIADA: Incluye datos del perfil, pagos y solicitudes
+export interface IStudent {
+  id: string;
+  matricula: string;
+  nombre: string;
+  groupId: string;
+  // Datos Personales (Perfil)
+  telefono?: string;
+  correo?: string;
+  direccion?: string;
+  fechaNacimiento?: string;
+  curp?: string;
+  tutor?: string;
+  telefonoTutor?: string;
+  // Estadísticas de la vista de perfil
+  promedio?: number;
+  faltas?: number;
+  asistencias?: number;
+  // Listas para las pestañas de Pagos y Solicitudes
+  pagos?: any[];
+  solicitudes?: any[];
+}
+
 export interface IReportEntry {
   matricula: string;
   nombreAlumno: string;
@@ -42,6 +65,7 @@ export class AdminService {
   private messages: IMessage[] = []; 
   private plans: IPlan[] = [];      
   private subjects: ISubject[] = []; 
+  private students: IStudent[] = []; 
 
   // --- MÉTODOS DE GRUPOS ---
 
@@ -57,14 +81,12 @@ export class AdminService {
     return newGroup;
   }
 
-  // ACTUALIZADO: Lógica para la modal "Editar Grupo"
   update(id: string, dto: any): IGroup | null {
     const index = this.groups.findIndex(g => g.id === id);
     if (index !== -1) {
       this.groups[index] = { 
         ...this.groups[index], 
         ...dto,
-        // Recalculamos el nombre completo basado en los nuevos campos de la modal
         nombreCompleto: `GRUPO ${dto.grado || this.groups[index].grado}${dto.letra || this.groups[index].letra}`
       };
       return this.groups[index];
@@ -72,11 +94,77 @@ export class AdminService {
     return null;
   }
 
-  // ACTUALIZADO: Eliminar grupo desde el enlace rojo de la tarjeta
   remove(id: string): boolean {
     const initialLength = this.groups.length;
     this.groups = this.groups.filter(group => group.id !== id);
     return this.groups.length < initialLength;
+  }
+
+  // --- MÉTODOS DE ESTUDIANTES ---
+
+  getStudentsByGroup(groupId: string): IStudent[] {
+    return this.students.filter(s => s.groupId === groupId);
+  }
+
+  // Obtener perfil detallado del alumno
+  getStudentById(id: string): IStudent | null {
+    const student = this.students.find(s => s.id === id);
+    if (!student) return null;
+
+    // Retornamos el alumno con datos para las pestañas de la interfaz
+    return {
+      ...student,
+      promedio: student.promedio || 8.5,
+      faltas: student.faltas || 4,
+      asistencias: student.asistencias || 42,
+      pagos: [
+        { id: 1, concepto: 'Matrícula Semestral', fecha: '15/01/2024', monto: 5000, estado: 'Pagado' },
+        { id: 2, concepto: 'Mensualidad Enero', fecha: '05/01/2024', monto: 2500, estado: 'Pagado' },
+        { id: 3, concepto: 'Mensualidad Febrero', fecha: 'Pendiente', monto: 2500, estado: 'Pendiente' }
+      ],
+      solicitudes: [
+        { id: 1, tipo: 'Constancia de Estudios', fecha: '20/01/2024', estado: 'Aprobada' },
+        { id: 2, tipo: 'Justificación de Falta', fecha: '18/01/2024', estado: 'En revisión' }
+      ]
+    };
+  }
+
+  createStudent(dto: any): IStudent {
+    const newStudent: IStudent = {
+      id: Math.random().toString(36).substr(2, 9),
+      matricula: dto.matricula,
+      nombre: dto.nombre,
+      groupId: dto.groupId,
+      // Inicializamos campos de perfil vacíos para ser llenados después
+      correo: '',
+      telefono: '',
+      direccion: '',
+      curp: '',
+      tutor: ''
+    };
+    this.students.push(newStudent);
+    return newStudent;
+  }
+
+  // Actualiza los campos de la modal "Editar Perfil de Alumno"
+  updateStudent(id: string, dto: any): IStudent | null {
+    const index = this.students.findIndex(s => s.id === id);
+    if (index !== -1) {
+      this.students[index] = { ...this.students[index], ...dto };
+      return this.students[index];
+    }
+    return null;
+  }
+
+  async getStudentListPDF(groupId: string): Promise<Buffer> {
+    const groupStudents = this.getStudentsByGroup(groupId);
+    return Buffer.from(`Lista oficial de asistencia - Grupo ${groupId}`);
+  }
+
+  // Genera el historial académico en PDF
+  async getStudentHistoryPDF(id: string): Promise<Buffer> {
+    const student = this.getStudentById(id);
+    return Buffer.from(`Historial Académico Completo - ${student?.nombre}`);
   }
 
   // --- MÉTODOS DE MENSAJES ---
@@ -93,7 +181,7 @@ export class AdminService {
 
   getMessageHistory(): IMessage[] { return this.messages; }
 
-  // --- MÉTODOS DE GESTIÓN ACADÉMICA (PLANES) ---
+  // --- MÉTODOS DE GESTIÓN ACADÉMICA (PLANES/MATERIAS) ---
 
   createPlan(dto: any): IPlan {
     const newPlan: IPlan = {
@@ -124,8 +212,6 @@ export class AdminService {
     this.subjects = this.subjects.filter(s => s.planId !== id);
     return this.plans.length < initialLength;
   }
-
-  // --- MÉTODOS DE GESTIÓN ACADÉMICA (MATERIAS) ---
 
   createSubject(dto: any): ISubject {
     const newSubject: ISubject = {
@@ -173,8 +259,6 @@ export class AdminService {
   }
 
   async getReportPDF(query: ReportQueryDto): Promise<Buffer> {
-    const data = this.generateAcademicReport(query);
-    console.log(`Generando PDF para ${data.length} alumnos del grupo ${query.groupId}`);
     return Buffer.from('Contenido binario del reporte PDF'); 
   }
 }
