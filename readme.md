@@ -1,98 +1,86 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# ACADEMIC-backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend centralizado para el sistema de control escolar, desarrollado en **NestJS**, **TypeScript** y **PostgreSQL**.
+Este sistema gestiona la lógica de negocio para los roles de **Administrador**, **Docente** y **Alumno**, además de la gestión de suscripciones SaaS (Tenants).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🚀 1. Inicio Rápido para Desarrolladores
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Sigue estos pasos estrictamente para levantar el entorno de desarrollo.
 
-## Project setup
+### Prerrequisitos
+* **Node.js:** v18 o superior.
+* **Docker Desktop:** Debe estar instalado y corriendo.
+* **Git:** Configurado correctamente.
 
+### Pasos de Instalación
+
+1.  **Clona el repositorio y ubícate en la rama base:**
+    ```bash
+    git clone <URL_DEL_REPO>
+    cd ACADEMIC-backend
+    git checkout develop
+    git pull origin develop
+    ```
+
+2.  **Crea tu rama de trabajo (NUNCA trabajes directo en develop):**
+    Usa la nomenclatura `feature/<rol>/<funcionalidad>`.
+    * *Ejemplo Admin:* `git checkout -b feature/admin/dashboard`
+    * *Ejemplo Docente:* `git checkout -b feature/teacher/grades`
+    * *Ejemplo Alumno:* `git checkout -b feature/student/profile`
+
+3.  **Configura las Variables de Entorno:**
+    El archivo `.env` no se sube al repositorio por seguridad.
+    * Copia el archivo de ejemplo:
+      ```bash
+      cp .env.example .env
+      ```
+    * (Opcional) Edita `.env` si necesitas credenciales diferentes a las por defecto (`admin`/`root`).
+
+4.  **Instala dependencias:**
+    ```bash
+    npm install
+    ```
+
+5.  **Levanta la Base de Datos (Docker):**
+    Esto descargará la imagen de PostgreSQL y PGAdmin.
+    ```bash
+    docker-compose up -d
+    ```
+
+6.  **Inicia el Servidor (Modo Desarrollo):**
+    ```bash
+    npm run start:dev
+    ```
+    *El servidor correrá en: `http://localhost:3000`*
+
+---
+
+## 🐳 2. Solución de Problemas Comunes con Docker
+
+Si tienes problemas al levantar los contenedores, revisa esta lista antes de pedir ayuda.
+
+### 🔴 Error: "Port 5432 is already allocated"
+**Causa:** Tienes instalado PostgreSQL localmente en tu computadora y está ocupando el puerto.
+**Solución:**
+* **Opción A (Recomendada):** Detén tu servicio local de Postgres.
+  * *Windows:* `Services.msc` -> Buscar PostgreSQL -> Stop.
+  * *Linux/Mac:* `sudo service postgresql stop`.
+* **Opción B:** Cambia el puerto en `docker-compose.yml` (ej. `"5433:5432"`) y actualiza tu `.env`.
+
+### 🔴 Error: "Connection refused" al conectar NestJS con la DB
+**Causa:** El contenedor no ha terminado de iniciar o las credenciales en `.env` no coinciden.
+**Solución:**
+1. Revisa que el contenedor esté corriendo: `docker ps`.
+2. Revisa los logs de la base de datos: `docker logs academic_db`.
+3. Verifica que `DB_HOST=localhost` en tu `.env`.
+
+### 🧹 Reinicio Limpio (Borrón y Cuenta Nueva)
+Si corrompiste la base de datos y quieres empezar desde cero:
 ```bash
-$ npm install
-```
+# Baja los contenedores y BORRA los volúmenes de datos
+docker-compose down -v
 
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Vuelve a levantar todo limpio
+docker-compose up -d
