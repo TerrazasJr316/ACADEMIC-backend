@@ -42,7 +42,7 @@ export class StudentController {
   }
 
   @Get(':id/notifications')
-  getNotifications(@Param('id') id: string) {
-    return this.studentService.getNotifications(id);
+  getNotifications(@Param('id') id: string, @Query('search') search?: string) {
+    return this.studentService.getNotifications(id, search);
   }
 }

@@ -2,12 +2,15 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class StudentService {
-  // 1. Centralizamos las notificaciones para que se usen en varios métodos
+  // 1. Centralizamos las notificaciones
   private readonly misNotificaciones = [
-    { id: 'n1', mensaje: 'Tu calificación de Desarrollo Web ya está disponible.', leida: false, fecha: '2026-01-11' },
-    { id: 'n2', mensaje: 'Recordatorio: Mañana examen de Bases de Datos en el aula B4.', leida: false, fecha: '2026-01-10' },
-    { id: 'n3', mensaje: 'Aviso: La clase de Arquitectura de Software se suspende por conferencia.', leida: true, fecha: '2026-01-09' },
+    { id: 'n1', mensaje: 'Tu calificación final de Matemáticas I es 9.5.', leida: false, fecha: '2024-09-03', tipo: 'calificacion' },
+    { id: 'n2', mensaje: 'Se ha creado una nueva tarea en Programación Web.', leida: false, fecha: '2024-09-03', tipo: 'tarea' },
+    { id: 'n3', mensaje: 'La Mtra. Ana García ha enviado un nuevo mensaje.', leida: true, fecha: '2024-07-03', tipo: 'mensaje' },
+    { id: 'n4', mensaje: 'El horario de la clase de Física ha sido modificado.', leida: true, fecha: '2024-09-03', tipo: 'aviso' },
   ];
+
+  // ... (existing code for profile and subjects ...)
 
   // Datos del Perfil (Mock para Sofia Rodriguez)
   getProfile(id: string) {
@@ -105,7 +108,13 @@ export class StudentService {
     ];
   }
 
-  getNotifications(id: string) {
-    return this.misNotificaciones;
+  getNotifications(id: string, query?: string) {
+    if (!query) {
+      return this.misNotificaciones;
+    }
+    const lowerQuery = query.toLowerCase();
+    return this.misNotificaciones.filter(n => 
+      n.mensaje.toLowerCase().includes(lowerQuery)
+    );
   }
 }
