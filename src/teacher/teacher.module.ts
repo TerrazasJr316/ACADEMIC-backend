@@ -1,21 +1,12 @@
 import { Module } from '@nestjs/common';
-import { GroupsModule } from './groups/groups.module';
-import { MessagesModule } from './messages/messages.module';
-import { ReportsModule } from './reports/reports.module';
-import { StudentsModule } from './students/students.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { TeacherProfile } from './entities/teacher-profile.entity';
 
 @Module({
   imports: [
-    GroupsModule,
-    MessagesModule,
-    ReportsModule,
-    StudentsModule,
+    TypeOrmModule.forFeature([TeacherProfile])
   ],
-  exports: [
-    GroupsModule,
-    MessagesModule,
-    ReportsModule,
-    StudentsModule,
-  ]
+  controllers: [],
+  providers: [],
 })
-export class TeacherModule {} // 👈 Importante: La clase debe llamarse así y estar exportada
+export class TeacherModule {}
