@@ -19,3 +19,4 @@ async function bootstrap() {
 void bootstrap().catch((err) => {
   console.error('Error al iniciar:', err);
 });
+
