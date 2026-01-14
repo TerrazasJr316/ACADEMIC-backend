@@ -8,5 +8,6 @@ import { AdminProfile } from './entities/admin-profile.entity';
   ],
   controllers: [],
   providers: [],
+
 })
 export class AdminModule {}
