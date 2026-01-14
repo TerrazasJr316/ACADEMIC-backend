@@ -29,13 +29,11 @@ export interface ISubject {
   planId: string;
 }
 
-// INTERFAZ AMPLIADA: Incluye datos del perfil, pagos y solicitudes
 export interface IStudent {
   id: string;
   matricula: string;
   nombre: string;
   groupId: string;
-  // Datos Personales (Perfil)
   telefono?: string;
   correo?: string;
   direccion?: string;
@@ -43,13 +41,21 @@ export interface IStudent {
   curp?: string;
   tutor?: string;
   telefonoTutor?: string;
-  // Estadísticas de la vista de perfil
   promedio?: number;
   faltas?: number;
   asistencias?: number;
-  // Listas para las pestañas de Pagos y Solicitudes
   pagos?: any[];
   solicitudes?: any[];
+}
+
+// NUEVA INTERFAZ: Docentes
+export interface ITeacher {
+  id: string;
+  clave: string;
+  nombre: string;
+  email: string;
+  telefono?: string;
+  especialidad?: string;
 }
 
 export interface IReportEntry {
@@ -66,6 +72,48 @@ export class AdminService {
   private plans: IPlan[] = [];      
   private subjects: ISubject[] = []; 
   private students: IStudent[] = []; 
+  // Almacén de docentes con datos iniciales de prueba
+  private teachers: ITeacher[] = [
+    { id: '1', clave: 'DOC-1001', nombre: 'Rodolfo Docente', email: 'drodolfo@tesji.com' },
+    { id: '2', clave: 'DOC-1002', nombre: 'Marta Ríos', email: 'marta@tesji.com' }
+  ];
+
+  // --- MÉTODOS DE DASHBOARD ---
+  // Proporciona los contadores para las tarjetas del panel
+  getDashboardStats() {
+    return {
+      totalStudents: this.students.length,
+      totalTeachers: this.teachers.length,
+      totalGroups: this.groups.length
+    };
+  }
+
+  // --- MÉTODOS DE DOCENTES (NUEVO) ---
+
+  findAllTeachers(): ITeacher[] {
+    return this.teachers;
+  }
+
+  // Lógica para la modal "Registrar Nuevo Docente"
+  createTeacher(dto: any): ITeacher {
+    const newTeacher: ITeacher = {
+      id: Math.random().toString(36).substr(2, 9),
+      clave: dto.clave,
+      nombre: dto.nombre,
+      email: dto.email,
+      telefono: dto.telefono,
+      especialidad: dto.especialidad
+    };
+    this.teachers.push(newTeacher);
+    return newTeacher;
+  }
+
+  // Lógica para eliminar perfil de docente
+  removeTeacher(id: string): boolean {
+    const initialLength = this.teachers.length;
+    this.teachers = this.teachers.filter(t => t.id !== id);
+    return this.teachers.length < initialLength;
+  }
 
   // --- MÉTODOS DE GRUPOS ---
 
@@ -106,12 +154,10 @@ export class AdminService {
     return this.students.filter(s => s.groupId === groupId);
   }
 
-  // Obtener perfil detallado del alumno
   getStudentById(id: string): IStudent | null {
     const student = this.students.find(s => s.id === id);
     if (!student) return null;
 
-    // Retornamos el alumno con datos para las pestañas de la interfaz
     return {
       ...student,
       promedio: student.promedio || 8.5,
@@ -135,7 +181,6 @@ export class AdminService {
       matricula: dto.matricula,
       nombre: dto.nombre,
       groupId: dto.groupId,
-      // Inicializamos campos de perfil vacíos para ser llenados después
       correo: '',
       telefono: '',
       direccion: '',
@@ -146,7 +191,6 @@ export class AdminService {
     return newStudent;
   }
 
-  // Actualiza los campos de la modal "Editar Perfil de Alumno"
   updateStudent(id: string, dto: any): IStudent | null {
     const index = this.students.findIndex(s => s.id === id);
     if (index !== -1) {
@@ -157,11 +201,9 @@ export class AdminService {
   }
 
   async getStudentListPDF(groupId: string): Promise<Buffer> {
-    const groupStudents = this.getStudentsByGroup(groupId);
     return Buffer.from(`Lista oficial de asistencia - Grupo ${groupId}`);
   }
 
-  // Genera el historial académico en PDF
   async getStudentHistoryPDF(id: string): Promise<Buffer> {
     const student = this.getStudentById(id);
     return Buffer.from(`Historial Académico Completo - ${student?.nombre}`);
@@ -181,7 +223,7 @@ export class AdminService {
 
   getMessageHistory(): IMessage[] { return this.messages; }
 
-  // --- MÉTODOS DE GESTIÓN ACADÉMICA (PLANES/MATERIAS) ---
+  // --- MÉTODOS DE GESTIÓN ACADÉMICA ---
 
   createPlan(dto: any): IPlan {
     const newPlan: IPlan = {
@@ -248,8 +290,7 @@ export class AdminService {
   generateAcademicReport(query: ReportQueryDto): IReportEntry[] {
     const mockData: IReportEntry[] = [
       { matricula: 'A001', nombreAlumno: 'Juan Pérez López', calificacion: 9.5, asistencia: '95%' },
-      { matricula: 'A002', nombreAlumno: 'María González Ruiz', calificacion: 8.0, asistencia: '100%' },
-      { matricula: '20201234', nombreAlumno: 'Carlos Sánchez García', calificacion: 7.5, asistencia: '88%' }
+      { matricula: 'A002', nombreAlumno: 'María González Ruiz', calificacion: 8.0, asistencia: '100%' }
     ];
 
     if (query.alumnoMatricula) {

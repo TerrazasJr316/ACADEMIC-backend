@@ -9,6 +9,36 @@ import { ReportQueryDto } from './dto/report-query.dto';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+  // --- SECCIÓN: DASHBOARD (NUEVO) ---
+
+  // Obtiene los contadores para las tarjetas principales (Alumnos, Docentes, Grupos)
+  @Get('dashboard/stats')
+  getDashboardStats() {
+    return this.adminService.getDashboardStats();
+  }
+
+  // --- SECCIÓN: DOCENTES (NUEVO) ---
+
+  // Obtiene la lista para la tabla de docentes
+  @Get('teachers')
+  getTeachers() {
+    return this.adminService.findAllTeachers();
+  }
+
+  // Registra un docente desde la modal "Registrar Nuevo Docente"
+  @Post('teachers')
+  addTeacher(@Body() dto: any) {
+    return this.adminService.createTeacher(dto);
+  }
+
+  // Elimina el perfil del docente (Acción del botón basurero)
+  @Delete('teachers/:id')
+  deleteTeacher(@Param('id') id: string) {
+    const deleted = this.adminService.removeTeacher(id);
+    if (!deleted) throw new NotFoundException('El docente no existe');
+    return { message: 'Docente eliminado correctamente' };
+  }
+
   // --- SECCIÓN: GRUPOS ---
   @Post('groups')
   createGroup(@Body() createGroupDto: CreateGroupDto) {
@@ -48,7 +78,6 @@ export class AdminController {
     return this.adminService.createStudent(dto);
   }
 
-  // NUEVO: Obtiene el perfil detallado para las pestañas de Info, Pagos y Solicitudes
   @Get('students/:id')
   getStudentProfile(@Param('id') id: string) {
     const profile = this.adminService.getStudentById(id);
@@ -56,7 +85,6 @@ export class AdminController {
     return profile;
   }
 
-  // NUEVO: Ruta para la modal "Editar Perfil de Alumno"
   @Patch('students/:id')
   updateStudent(@Param('id') id: string, @Body() dto: any) {
     const updated = this.adminService.updateStudent(id, dto);
@@ -76,7 +104,6 @@ export class AdminController {
     res.end(buffer);
   }
 
-  // NUEVO: Botón "Descargar Historial" en PDF dentro del perfil
   @Get('students/:id/export-history-pdf')
   @Header('Content-Type', 'application/pdf')
   async exportStudentHistory(@Param('id') id: string, @Res() res: Response) {
