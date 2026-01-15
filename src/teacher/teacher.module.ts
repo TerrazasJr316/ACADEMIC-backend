@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TeacherProfile } from './entities/teacher-profile.entity';
@@ -12,4 +10,3 @@ import { TeacherProfile } from './entities/teacher-profile.entity';
   providers: [],
 })
 export class TeacherModule {}
->>>>>>> feature/auth/teacher
