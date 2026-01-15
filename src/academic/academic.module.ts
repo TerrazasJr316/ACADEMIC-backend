@@ -8,21 +8,23 @@ import { Schedule } from './entities/schedule.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { GradeCard } from './entities/grade-card.entity';
 import { AttendanceDetail } from './entities/attendance-detail.entity';
+import { AcademicController } from './controllers/academic.controller';
+import { AcademicService } from './service/academic.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      AcademicPeriod, 
-      Group, 
-      Subject, 
-      Course, 
-      Schedule, 
-      Enrollment, 
-      GradeCard, 
-      AttendanceDetail
-    ])
+      AcademicPeriod,
+      Group,
+      Subject,
+      Course,
+      Schedule,
+      Enrollment,
+      GradeCard,
+      AttendanceDetail,
+    ]),
   ],
-  controllers: [],
-  providers: [],
+  controllers: [AcademicController],
+  providers: [AcademicService],
 })
 export class AcademicModule {}
