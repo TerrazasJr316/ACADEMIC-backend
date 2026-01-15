@@ -37,9 +37,11 @@ export class StudentProfile {
 
   @Column({ name: 'grado_actual' })
   gradoActual: string; // Ej: "3er Semestre"
-
+  
+  /* QUITAR COMENTARIO CUANDO SE MODIFIQUE ESTA PARTE
   @OneToMany(() => StudentPayment, (payment) => payment.student)
   payments: StudentPayment[];
+  */
 
   @OneToMany(() => Enrollment, (enrollment) => enrollment.student)
   enrollments: Enrollment[];

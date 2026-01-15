@@ -1,46 +1,54 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../users/entities/user.entity'; // Tu entidad real
+import * as bcrypt from 'bcrypt'; // Para leer la contraseña encriptada
+import { JwtService } from '@nestjs/jwt'; // El que pone el sello
 
 @Injectable()
 export class AuthService {
-  // Lista centralizada de usuarios para todo el equipo
-  private users = [
-    { 
-      id: 'a1', 
-      nombre: 'Admin Maria', 
-      email: 'adminmaria@tesji.com', 
-      rol: 'ADMIN', 
-      tenantId: 'T-123' 
-    },
-    { 
-      id: 'd1', 
-      nombre: 'Rodolfo Docente', 
-      email: 'drodolfo@tesji.com', 
-      rol: 'DOCENTE', 
-      tenantId: 'T-123' 
-    },
-    { 
-      id: 'l1', 
-      nombre: 'Laura Alumna', 
-      email: 'a12345678@tesji.com', 
-      rol: 'ALUMNO', 
-      tenantId: 'T-123' 
-    },
-  ];
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>, // Conexión a la BD
+    private readonly jwtService: JwtService // Máquina de sellos
+  ) {}
 
-  async validateUser(email: string, pass: string, schoolKey: string) {
-    // 1. Buscar al usuario por email (sin importar mayúsculas)
-    const user = this.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  // ESTA FUNCIÓN VALIDA SI EL USUARIO EXISTE Y LA CONTRASEÑA ES REAL
+  async validateUser(email: string, pass: string): Promise<any> {
+    // 1. Buscamos en la Base de Datos real
+    // (Pedimos que traiga también la contraseña oculta para compararla)
+    const user = await this.userRepository.findOne({ 
+      where: { email },
+      select: ['id', 'email', 'password', 'fullName', 'rol', 'school'], // Traemos datos clave
+      relations: ['school'] // Traemos a qué escuela pertenece
+    });
 
-    // 2. Extraer el dominio del correo para validar la escuela (SaaS Key)
-    const emailDomainPart = email.split('@')[1]?.split('.')[0];
-    
-    // 3. Validación de seguridad básica
-    if (!user || emailDomainPart !== schoolKey) {
-      throw new UnauthorizedException('Credenciales inválidas o clave de escuela incorrecta');
+    // 2. Si el usuario existe, comparamos la contraseña
+    if (user && (await bcrypt.compare(pass, user.password))) {
+      // 3. Quitamos la contraseña del objeto para no retornarla por seguridad
+      const { password, ...result } = user;
+      return result;
     }
 
-    // Si todo es correcto, regresamos los datos del usuario
-    console.log(`✅ Login exitoso para: ${user.nombre} (${user.rol})`);
-    return user;
+    return null; // Si no existe o pass incorrecto
+  }
+
+  // ESTA FUNCIÓN GENERA EL "TOKEN" (EL SELLO PARA ENTRAR)
+  async login(user: any) {
+    // Esto es lo que guardamos ENCRIPTADO dentro del token
+    const payload = { 
+      email: user.email, 
+      sub: user.id, 
+      rol: user.rol,
+      schoolId: user.school?.id // Importante para saber de qué escuela es
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload), // Generamos el string largo
+      user: { // Devolvemos info básica para el Frontend
+        fullName: user.fullName,
+        rol: user.rol
+      }
+    };
   }
 }
