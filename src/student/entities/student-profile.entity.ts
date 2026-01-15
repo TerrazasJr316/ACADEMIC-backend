@@ -1,29 +1,29 @@
-// CAMBIA EL IMPORT INICIAL POR:
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany } from 'typeorm';
+// src/student/entities/student-profile.entity.ts
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { StudentPayment } from '../../finance/entities/student-payment.entity';
-import { Enrollment } from '../../academic/entities/enrollment.entity';
+// import { StudentPayment } from '../../finance/entities/student-payment.entity'; // 🚧 PENDIENTE
+// import { Enrollment } from '../../academic/entities/enrollment.entity'; // 🚧 PENDIENTE
 
 @Entity('perfiles_alumno')
 export class StudentProfile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // RELACIÓN 1 a 1 con Usuario
+  // RELACIÓN 1 a 1 con Usuario (ESTA ES LA IMPORTANTE)
   @OneToOne(() => User, (user) => user.studentProfile)
-  @JoinColumn({ name: 'id_usuario' }) // FK física
+  @JoinColumn({ name: 'id_usuario' })
   user: User;
 
   @Column({ name: 'matricula', unique: true })
   matricula: string;
 
-  @Column({ length: 18, unique: true }) // CURP estándar mx
+  @Column({ length: 18, unique: true })
   curp: string;
 
   @Column({ name: 'fecha_nacimiento', type: 'date' })
   fechaNacimiento: Date;
 
-  @Column({ length: 20 }) // "Masculino", "Femenino", "Otro"
+  @Column({ length: 20 })
   genero: string;
 
   @Column()
@@ -36,13 +36,14 @@ export class StudentProfile {
   tipoSangre: string;
 
   @Column({ name: 'grado_actual' })
-  gradoActual: string; // Ej: "3er Semestre"
-  
-  /* QUITAR COMENTARIO CUANDO SE MODIFIQUE ESTA PARTE
+  gradoActual: string;
+
+  // 🚧 RELACIONES FUTURAS (Descomentar en FASE 4)
+  /*
   @OneToMany(() => StudentPayment, (payment) => payment.student)
   payments: StudentPayment[];
-  */
 
   @OneToMany(() => Enrollment, (enrollment) => enrollment.student)
   enrollments: Enrollment[];
+  */
 }

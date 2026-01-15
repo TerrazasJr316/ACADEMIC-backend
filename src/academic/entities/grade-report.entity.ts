@@ -1,7 +1,8 @@
+// src/academic/entities/grade-report.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Enrollment } from './enrollment.entity';
 import { Course } from './course.entity';
-import { EstadoCalificacion } from '../../shared/enums/grade-status.enum'; // ✅ Correcto
+import { EstadoCalificacion } from '../../shared/enums/grade-status.enum';
 
 @Entity('boletas_calificaciones')
 export class GradeReport {
@@ -18,33 +19,34 @@ export class GradeReport {
   @JoinColumn({ name: 'id_curso' })
   course: Course;
 
-  // Calificaciones con decimales (Ej: 8.5)
-  // Usamos 'nullable: true' porque al inicio del semestre están vacías
+  // --- CORRECCIÓN: Agregamos "| null" para que TypeScript acepte vacíos ---
+
   @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true, name: 'parcial_1' })
-  parcial1: number;
+  parcial1: number | null; // <--- CAMBIO AQUÍ
 
   @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true, name: 'parcial_2' })
-  parcial2: number;
+  parcial2: number | null; // <--- CAMBIO AQUÍ
 
   @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true, name: 'parcial_3' })
-  parcial3: number;
+  parcial3: number | null; // <--- CAMBIO AQUÍ
 
   @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true, name: 'promedio_final' })
-  promedioFinal: number;
+  promedioFinal: number | null; // <--- CAMBIO AQUÍ
 
   @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true })
-  extraordinario: number;
+  extraordinario: number | null; // <--- CAMBIO AQUÍ
+
+  // ------------------------------------------------------------------------
 
   @Column({ name: 'porcentaje_asistencia_global', type: 'int', default: 100 })
   porcentajeAsistenciaGlobal: number;
 
-  // ...
   @Column({
     type: 'enum',
-    enum: EstadoCalificacion, // <--- Aquí también
-    default: EstadoCalificacion.NA // <--- Y aquí
+    enum: EstadoCalificacion,
+    default: EstadoCalificacion.NA
   })
-  estado: EstadoCalificacion; // <--- Y el tipo de dato
+  estado: EstadoCalificacion;
 
   @Column({ type: 'text', nullable: true })
   observaciones: string;
