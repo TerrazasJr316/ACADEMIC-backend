@@ -32,7 +32,7 @@ export class GradeCard {
   promedioFinal: number;
 
   @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true })
-  extraordinario: number;
+  extraordinario: number | null;
 
   @Column({ name: 'porcentaje_asistencia_global', type: 'int', default: 0 })
   porcentajeAsistenciaGlobal: number;
