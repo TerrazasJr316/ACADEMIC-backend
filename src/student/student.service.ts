@@ -2,29 +2,30 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StudentProfile } from './entities/student-profile.entity';
+import { CommunicationsService } from '../communications/communications.service'; // Importamos el servicio de notificaciones
 
 @Injectable()
 export class StudentService {
     constructor(
         @InjectRepository(StudentProfile)
         private readonly studentRepository: Repository<StudentProfile>,
+        private readonly communicationsService: CommunicationsService, // Inyectamos notificaciones
     ) { }
 
     async getStudentProfile(userId: string) {
         const profile = await this.studentRepository.findOne({
             where: { user: { id: userId } },
-            relations: ['user'], // Para traer nombre/email desde la tabla User
+            relations: ['user'],
         });
 
         if (!profile) {
             throw new NotFoundException('Perfil de alumno no encontrado');
         }
 
-        // Mapeamos los datos para que el Front (alumno.service.ts) los reciba como espera
         return {
             id: profile.id,
-            nombre: profile.user.fullName, // Campo de la entidad User
-            email: profile.user.email, // Campo de la entidad User
+            nombre: profile.user.fullName,
+            email: profile.user.email,
             matricula: profile.matricula,
             gradoActual: profile.gradoActual,
             curp: profile.curp,
@@ -36,20 +37,19 @@ export class StudentService {
         };
     }
 
+    /**
+     * Mapeado para getAlumnoDashboardSummary en alumno.service.ts
+     */
     async getDashboardSummary(userId: string) {
         const profile = await this.getStudentProfile(userId);
 
-        // Aquí podrías integrar con los otros servicios (Finance/Academic)
-        // Por ahora, devolvemos la estructura que tu front espera en el summary
+        // Obtenemos las notificaciones reales del módulo de comunicaciones
+        const notificacionesReales = await this.communicationsService.getStudentNotifications(userId);
+
         return {
-            perfil: profile,
-            notificaciones: [
-                { id: '1', mensaje: 'Bienvenido al ciclo 2025-1', leida: false, fecha: new Date() }
-            ],
-            estadisticas: {
-                asistencia: 95,
-                promedioGeneral: 9.0
-            }
+            promedioGeneral: 8.5, // Este dato vendrá de Academic más adelante
+            asistenciaPorcentaje: 90, // Este dato vendrá de Academic más adelante
+            notificaciones: notificacionesReales.slice(0, 3), // Solo enviamos las 3 más recientes para el Dashboard
         };
     }
 }
