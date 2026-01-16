@@ -1,53 +1,64 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../users/entities/user.entity'; // Tu entidad real
-import * as bcrypt from 'bcrypt'; // Para leer la contraseña encriptada
-import { JwtService } from '@nestjs/jwt'; // El que pone el sello
+import { User } from '../users/entities/user.entity'; 
+import * as bcrypt from 'bcrypt'; 
+import { JwtService } from '@nestjs/jwt'; 
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>, // Conexión a la BD
-    private readonly jwtService: JwtService // Máquina de sellos
+    private readonly userRepository: Repository<User>, 
+    private readonly jwtService: JwtService 
   ) {}
 
-  // ESTA FUNCIÓN VALIDA SI EL USUARIO EXISTE Y LA CONTRASEÑA ES REAL
+  // 1. VALIDAR USUARIO Y ESTADO DE LA ESCUELA 🛡️
   async validateUser(email: string, pass: string): Promise<any> {
-    // 1. Buscamos en la Base de Datos real
-    // (Pedimos que traiga también la contraseña oculta para compararla)
     const user = await this.userRepository.findOne({ 
       where: { email },
-      select: ['id', 'email', 'password', 'fullName', 'rol', 'school'], // Traemos datos clave
-      relations: ['school'] // Traemos a qué escuela pertenece
+      // 🔥 CRÍTICO: Traemos la relación 'school' para verificar su estado
+      relations: ['school'], 
+      // Seleccionamos password explícitamente (por defecto suele estar oculta)
+      select: ['id', 'email', 'password', 'fullName', 'rol', 'school'], 
     });
 
-    // 2. Si el usuario existe, comparamos la contraseña
-    if (user && (await bcrypt.compare(pass, user.password))) {
-      // 3. Quitamos la contraseña del objeto para no retornarla por seguridad
-      const { password, ...result } = user;
-      return result;
+    // A) Si el usuario no existe
+    if (!user) return null;
+
+    // B) Validar contraseña encriptada
+    const isMatch = await bcrypt.compare(pass, user.password);
+    if (!isMatch) return null;
+
+    // C) 🔒 VALIDACIÓN SAAS: ¿La escuela pagó?
+    // Si tiene escuela asignada Y la escuela está desactivada... ¡BLOQUEO!
+    if (user.school && user.school.isActive === false) {
+       throw new ForbiddenException('ACCESO DENEGADO: La suscripción de tu escuela está inactiva o hay un pago pendiente.');
     }
 
-    return null; // Si no existe o pass incorrecto
+    // D) Si pasa todo, retornamos el usuario SIN la contraseña
+    const { password, ...result } = user;
+    return result;
   }
 
-  // ESTA FUNCIÓN GENERA EL "TOKEN" (EL SELLO PARA ENTRAR)
+  // 2. GENERAR EL TOKEN (LOGIN EXITOSO) 🎟️
   async login(user: any) {
-    // Esto es lo que guardamos ENCRIPTADO dentro del token
     const payload = { 
       email: user.email, 
       sub: user.id, 
       rol: user.rol,
-      schoolId: user.school?.id // Importante para saber de qué escuela es
+      schoolId: user.school?.id // Dato vital para filtrar alumnos/maestros después
     };
 
     return {
-      access_token: this.jwtService.sign(payload), // Generamos el string largo
-      user: { // Devolvemos info básica para el Frontend
+      access_token: this.jwtService.sign(payload),
+      user: { 
+        id: user.id,
         fullName: user.fullName,
-        rol: user.rol
+        email: user.email,
+        rol: user.rol,
+        schoolName: user.school?.nombreEscuela,
+        isActive: user.school?.isActive // Dato útil para el front
       }
     };
   }
