@@ -1,39 +1,48 @@
-import { IsString, IsEmail, IsNotEmpty, IsEnum, Length } from 'class-validator';
-import { PlanSuscripcion } from '../../shared/enums/subscription-plan.enum';
+import { IsEmail, IsNotEmpty, IsString, IsOptional, IsEnum, MinLength } from 'class-validator';
+
+// Asegúrate de que el Enum coincida con el que usas en tu entity
+export enum PlanType {
+  BASIC = 'BASIC',
+  PRO = 'PRO',
+}
 
 export class RegisterTenantDto {
-  // --- DATOS DE LA ESCUELA ---
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   nombreEscuela: string;
 
-  @IsString()
   @IsNotEmpty()
-  dominioEscuela: string; // ej: "mi-escuela.com"
-
-  @IsEnum(PlanSuscripcion)
-  plan: PlanSuscripcion;
-
-  // --- DATOS DEL DUEÑO (ADMIN) ---
   @IsString()
-  @IsNotEmpty()
-  nombreAdmin: string;
+  dominioEscuela: string;
 
   @IsEmail()
+  @IsNotEmpty()
   emailAdmin: string;
 
+  // El nombre puede ser opcional si el form básico no lo pide, 
+  // pero la contraseña AHORA ES OBLIGATORIA SIEMPRE.
+  @IsOptional() 
+  nombreAdmin?: string;
+
+  @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   @IsString()
-  @Length(6, 20)
+  @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
   passwordAdmin: string;
 
-  // --- DATOS DE PAGO (SIMPLIFICADO) ---
-  @IsString()
-  nombreTitular: string;
+  @IsNotEmpty()
+  @IsEnum(PlanType)
+  plan: PlanType; 
 
+  // --- CAMPOS DE PAGO (Siguen siendo opcionales para BASIC) ---
+  @IsOptional()
   @IsString()
-  @Length(4, 4)
-  tarjetaUltimos4: string; // "4242"
+  tokenPago?: string;
 
+  @IsOptional()
   @IsString()
-  tokenPago: string; // El token que te da Stripe/Openpay
+  tarjetaUltimos4?: string;
+  
+  @IsOptional()
+  @IsString()
+  nombreTitular?: string;
 }

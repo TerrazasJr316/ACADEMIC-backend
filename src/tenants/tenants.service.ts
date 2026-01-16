@@ -1,73 +1,140 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { DataSource } from 'typeorm'; // Importante para guardar todo junto
+// 🔥 SOLUCIÓN 4: Agregamos 'NotFoundException' a los imports
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { DataSource } from 'typeorm'; 
 import { RegisterTenantDto } from './dtos/register-tenant.dto';
 import { School } from './entities/school.entity';
 import { BillingInfo } from './entities/billing-info.entity';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../shared/enums/user-role.enum';
-import * as bcrypt from 'bcrypt'; // Para encriptar contraseña
+import { StripeService } from './stripe.service'; 
+import * as bcrypt from 'bcrypt'; 
 
 @Injectable()
 export class TenantsService {
-  // Inyectamos el DataSource para manejar transacciones
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly stripeService: StripeService 
+  ) {}
 
   async registerSchool(data: RegisterTenantDto) {
-    // Iniciamos una transacción (Si algo falla, no se guarda NADA)
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // 1. CREAR LA ESCUELA 🏫
+      // 1. PREPARAMOS LA ESCUELA 
       const newSchool = new School();
       newSchool.nombreEscuela = data.nombreEscuela;
       newSchool.dominioEscuela = data.dominioEscuela;
       newSchool.correoContacto = data.emailAdmin;
-      newSchool.planSuscripcion = data.plan;
-      
-      // Guardamos la escuela usando el queryRunner
+      newSchool.planSuscripcion = data.plan as any; 
+      newSchool.isActive = true; 
+
+      let stripeCustomerId: string | null = null;
+      let stripeSubscriptionId: string | null = null;
+
+      // 2. LÓGICA DE STRIPE (PRO)
+      if (data.plan === 'PRO') {
+        
+        if (!data.tokenPago || !data.tarjetaUltimos4 || !data.nombreTitular) {
+          throw new BadRequestException('El Plan PRO requiere datos de pago completos.');
+        }
+
+        // Crear Cliente
+        const customer = await this.stripeService.createCustomer(
+          data.emailAdmin,
+          data.nombreEscuela,
+          data.tokenPago 
+        );
+        stripeCustomerId = customer.id;
+
+        // Validar precio y Crear Suscripción
+        const priceId = process.env.STRIPE_PRICE_ID_PRO;
+        if (!priceId) throw new BadRequestException('Configuración interna: Falta STRIPE_PRICE_ID_PRO');
+
+        const subscription = await this.stripeService.createSubscription(
+            stripeCustomerId,
+            priceId
+        );
+        stripeSubscriptionId = subscription.id;
+
+        newSchool.stripeCustomerId = stripeCustomerId;
+        newSchool.stripeSubscriptionId = stripeSubscriptionId;
+      } 
+
+      // 3. GUARDAR LA ESCUELA
       const savedSchool = await queryRunner.manager.save(newSchool);
 
-      // 2. CREAR INFO DE FACTURACIÓN 💳
-      const newBilling = new BillingInfo();
-      newBilling.nombreTitular = data.nombreTitular;
-      newBilling.ultimosDigitosTarjeta = data.tarjetaUltimos4;
-      newBilling.tokenPago = data.tokenPago;
-      newBilling.fechaVencimiento = new Date(); // Simulamos fecha actual
-      newBilling.direccionFiscal = 'Dirección pendiente'; 
-      newBilling.school = savedSchool; // <--- AQUÍ LA CONECTAMOS
+      // 4. GUARDAR BILLING INFO
+      if (data.plan === 'PRO') {
+         const billing = new BillingInfo();
+         billing.nombreTitular = data.nombreTitular || '';
+         billing.ultimosDigitosTarjeta = data.tarjetaUltimos4 || '';
+         billing.tokenPago = data.tokenPago || ''; 
+         billing.fechaVencimiento = new Date();
+         billing.direccionFiscal = 'Sin dirección registrada (MVP)';
+         billing.school = savedSchool;
+         
+         await queryRunner.manager.save(billing);
+      }
 
-      await queryRunner.manager.save(newBilling);
-
-      // 3. CREAR EL USUARIO ADMIN 👤
+      // 5. CREAR EL USUARIO ADMIN
       const newUser = new User();
-      newUser.fullName = data.nombreAdmin;
+      newUser.fullName = data.nombreAdmin || 'Administrador'; 
       newUser.email = data.emailAdmin;
-      newUser.rol = UserRole.ADMIN; // Es el jefe
-      newUser.school = savedSchool; // <--- LO CONECTAMOS A LA ESCUELA
+      newUser.rol = UserRole.ADMIN;
+      newUser.school = savedSchool;
       
-      // Encriptar contraseña
+      if (!data.passwordAdmin) throw new BadRequestException('Falta password');
+
       const salt = await bcrypt.genSalt(10);
       newUser.password = await bcrypt.hash(data.passwordAdmin, salt);
 
       await queryRunner.manager.save(newUser);
 
-      // SI TODO SALIÓ BIEN, CONFIRMAMOS LOS CAMBIOS ✅
       await queryRunner.commitTransaction();
 
       return {
-        message: '¡Escuela registrada con éxito!',
+        success: true,
+        message: data.plan === 'PRO' ? 'Suscripción PRO Activa' : 'Registro Básico Exitoso',
         schoolId: savedSchool.id,
-        adminEmail: newUser.email
+        stripeCustomerId: stripeCustomerId, 
+        stripeSubscriptionId: stripeSubscriptionId
       };
 
     } catch (error) {
-      // SI ALGO FALLÓ, DESHACEMOS TODO ❌
       await queryRunner.rollbackTransaction();
-      throw new BadRequestException('Error al registrar: ' + error.message);
+      console.error("Error registro:", error);
+      throw new BadRequestException(error.message); 
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  // MÉTODO PARA CANCELACIÓN
+  async cancelTenantSubscription(schoolId: string) {
+    const school = await this.dataSource.getRepository(School).findOne({ where: { id: schoolId } });
+    
+    if (!school) throw new NotFoundException('Escuela no encontrada');
+
+    if (!school.stripeSubscriptionId) {
+      throw new BadRequestException('Esta escuela no tiene una suscripción activa o es Plan Básico.');
+    }
+
+    try {
+      await this.stripeService.cancelSubscription(school.stripeSubscriptionId);
+
+      // Desactivamos la escuela localmente
+      school.isActive = false; 
+      await this.dataSource.getRepository(School).save(school);
+
+      return { 
+        success: true, 
+        message: 'Suscripción cancelada correctamente. El acceso se ha revocado.' 
+      };
+
+    } catch (error) {
+      throw new BadRequestException('Error al cancelar en Stripe: ' + error.message);
     }
   }
 }

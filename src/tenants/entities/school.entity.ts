@@ -36,6 +36,16 @@ export class School {
   @UpdateDateColumn({ name: 'fecha_actualizacion', select: false })
   updatedAt: Date;
 
+  @Column({ type: 'varchar', nullable: true })
+  stripeSubscriptionId: string; // Para controlar su suscripción (cancelar/pausar)
+
+  // 🔥 SOLUCIÓN AL ERROR: Agregamos la columna isActive
+  @Column({ default: true }) 
+  isActive: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  stripeCustomerId: string | null;
+
   @OneToMany(() => User, (user) => user.school)
   users: User[];
 }

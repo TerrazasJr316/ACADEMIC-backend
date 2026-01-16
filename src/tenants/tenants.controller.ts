@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Request, Param } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 import { RegisterTenantDto } from './dtos/register-tenant.dto';
 import { AuthGuard } from '@nestjs/passport'; // Guardia de Autenticación (¿Quién eres?)
@@ -39,5 +39,10 @@ export class TenantsController {
       saldo_disponible: 1000000,
       moneda: 'MXN'
     };
+  }
+
+  @Post(':id/cancel')
+  cancelSubscription(@Param('id') id: string) {
+    return this.tenantsService.cancelTenantSubscription(id);
   }
 }

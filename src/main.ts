@@ -2,7 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
 
   // Configuración agresiva de CORS
   app.enableCors({
@@ -13,7 +15,7 @@ async function bootstrap() {
   });
 
   await app.listen(process.env.PORT ?? 3000);
-  console.log(`✅ Servidor listo en: http://localhost:3000`);
+  console.log(`Servidor corriendo: http://localhost:3000`);
 }
 
 void bootstrap().catch((err) => {

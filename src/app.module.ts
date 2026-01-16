@@ -32,6 +32,7 @@ import { CommunicationsModule } from './communications/communications.module';
       database: process.env.DB_NAME || 'academic_saas',
       autoLoadEntities: true, // <--- Carga tus entidades automáticamente
       synchronize: true, // <--- ¡ESTO CREA LAS TABLAS POR TI! (Solo dev)
+      dropSchema: false,
     }),
 
     // Tus módulos funcionales
