@@ -36,7 +36,7 @@ export class StudentProfile {
   tipoSangre: string;
 
   @Column({ name: 'grado_actual' })
-<<<<<<< HEAD
+
   gradoActual: string; // Ej: "3er Semestre"
 
   /* QUITAR COMENTARIO CUANDO SE MODIFIQUE ESTA PARTE
