@@ -6,13 +6,16 @@ export class AdminProfile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @OneToOne(() => User, (user) => user.adminProfile)
+  // ⚠️ AJUSTE: Quitamos la segunda parte temporalmente para evitar errores 
+  // si el archivo del Líder (User) no tiene la propiedad 'adminProfile'.
+  // Con { onDelete: 'CASCADE' } aseguramos que si borran al User, se borra este perfil.
+  @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_usuario' })
   user: User;
 
-  @Column()
-  departamento: string; // Ej: "Control Escolar", "Finanzas"
+  @Column({ default: 'Dirección General' }) // Valor por defecto por si acaso
+  departamento: string; 
 
-  @Column()
-  puesto: string; // Ej: "Director", "Secretaria"
+  @Column({ default: 'Director' })
+  puesto: string;
 }

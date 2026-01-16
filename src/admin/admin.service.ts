@@ -1,305 +1,136 @@
-import { Injectable } from '@nestjs/common';
-import { IGroup } from './interfaces/group.interface';
-import { CreateGroupDto } from './dto/create-group.dto';
-import { SendMessageDto } from './dto/send-message.dto';
-import { ReportQueryDto } from './dto/report-query.dto';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
-// --- INTERFACES ---
+// ENTIDADES
+import { User } from '../users/entities/user.entity';
+import { School } from '../tenants/entities/school.entity';
+import { AdminProfile } from './entities/admin-profile.entity';
+import { Message } from './entities/message.entity';
+import { AcademicPeriod } from '../academic/entities/academic-period.entity';
+import { Subject } from '../academic/entities/subject.entity';
+import { GradeCard } from '../academic/entities/grade-card.entity';
+import { Course } from '../academic/entities/course.entity';
+import { Group } from '../academic/entities/group.entity';
+import { Enrollment } from '../academic/entities/enrollment.entity';
+import { StudentProfile } from '../student/entities/student-profile.entity';
+import { TeacherProfile } from '../teacher/entities/teacher-profile.entity';
 
-export interface IMessage {
-  id: number;
-  fecha: string;
-  destinatario: string;
-  asunto: string;
-  cuerpo: string;
-}
-
-export interface IPlan {
-  id: string;
-  nombre: string;
-  codigo: string;
-  fechaInicio: string;
-  fechaFin: string;
-}
-
-export interface ISubject {
-  id: string;
-  nombre: string;
-  codigo: string;
-  planId: string;
-}
-
-export interface IStudent {
-  id: string;
-  matricula: string;
-  nombre: string;
-  groupId: string;
-  telefono?: string;
-  correo?: string;
-  direccion?: string;
-  fechaNacimiento?: string;
-  curp?: string;
-  tutor?: string;
-  telefonoTutor?: string;
-  promedio?: number;
-  faltas?: number;
-  asistencias?: number;
-  pagos?: any[];
-  solicitudes?: any[];
-}
-
-// NUEVA INTERFAZ: Docentes
-export interface ITeacher {
-  id: string;
-  clave: string;
-  nombre: string;
-  email: string;
-  telefono?: string;
-  especialidad?: string;
-}
-
-export interface IReportEntry {
-  matricula: string;
-  nombreAlumno: string;
-  calificacion: number;
-  asistencia: string;
-}
+// DTOs
+import { CreateMessageDto } from './dtos/create-message.dto';
+import { CreateGroupDto } from './dtos/create-group.dto';
+import { AddStudentDto } from './dtos/add-student-to-group.dto';
+import { CreateDocenteDto } from './dtos/create-docente.dto';
+import { UserRole } from '../shared/enums/user-role.enum';
 
 @Injectable()
 export class AdminService {
-  private groups: IGroup[] = [];
-  private messages: IMessage[] = []; 
-  private plans: IPlan[] = [];      
-  private subjects: ISubject[] = []; 
-  private students: IStudent[] = []; 
-  // Almacén de docentes con datos iniciales de prueba
-  private teachers: ITeacher[] = [
-    { id: '1', clave: 'DOC-1001', nombre: 'Rodolfo Docente', email: 'drodolfo@tesji.com' },
-    { id: '2', clave: 'DOC-1002', nombre: 'Marta Ríos', email: 'marta@tesji.com' }
-  ];
+  constructor(
+    @InjectRepository(User) private userRepository: Repository<User>,
+    @InjectRepository(School) private schoolRepository: Repository<School>,
+    @InjectRepository(AdminProfile) private adminProfileRepo: Repository<AdminProfile>,
+    @InjectRepository(Message) private messageRepository: Repository<Message>,
+    @InjectRepository(AcademicPeriod) private periodRepo: Repository<AcademicPeriod>,
+    @InjectRepository(Subject) private subjectRepo: Repository<Subject>,
+    @InjectRepository(GradeCard) private gradeCardRepo: Repository<GradeCard>,
+    @InjectRepository(Course) private courseRepo: Repository<Course>,
+    @InjectRepository(Group) private groupRepo: Repository<Group>,
+    @InjectRepository(Enrollment) private enrollmentRepo: Repository<Enrollment>,
+    @InjectRepository(StudentProfile) private studentProfileRepo: Repository<StudentProfile>,
+    @InjectRepository(TeacherProfile) private teacherProfileRepo: Repository<TeacherProfile>,
+  ) {}
 
-  // --- MÉTODOS DE DASHBOARD ---
-  // Proporciona los contadores para las tarjetas del panel
-  getDashboardStats() {
+  // --- DASHBOARD ---
+  async getDashboardData(schoolId: string, userId: string) {
+    const school = await this.schoolRepository.findOne({ where: { id: schoolId } });
+    const docs = await this.userRepository.count({ where: { school: { id: schoolId }, rol: UserRole.DOCENTE } });
+    const alums = await this.userRepository.count({ where: { school: { id: schoolId }, rol: UserRole.ALUMNO } });
+    return { bienvenida: `Panel de ${school?.nombreEscuela || 'Escuela'}`, metricas: { docentes: docs, alumnos: alums } };
+  }
+
+  // --- GRUPOS ---
+  async getGroups(schoolId: string) {
+    const grupos = await this.groupRepo.find({ where: { period: { school: { id: schoolId } } }, order: { nombre: 'ASC' } });
+    return await Promise.all(grupos.map(async (g) => {
+      const count = await this.enrollmentRepo.count({ where: { group: { id: g.id } } });
+      return { id: g.id, nombre: `GRUPO ${g.nombre}`, alumnos: count, grado: g.semestre || 1 };
+    }));
+  }
+
+  async saveGroup(dto: CreateGroupDto, schoolId: string) {
+    const periodo = await this.periodRepo.findOne({ where: { school: { id: schoolId } }, order: { fechaInicio: 'DESC' } });
+    if (!periodo) throw new NotFoundException('Crea un ciclo primero');
+    const data = { ...(dto.id && dto.id !== '0' ? { id: dto.id } : {}), nombre: dto.nombre, semestre: dto.semestre || 1, limiteAlumnos: dto.limiteAlumnos, period: periodo };
+    return await this.groupRepo.save(data as any);
+  }
+
+  // --- DOCENTES ---
+  async getDocentes(schoolId: string) {
+    const docentes = await this.teacherProfileRepo.find({ where: { user: { school: { id: schoolId } } }, relations: ['user'], order: { user: { email: 'ASC' } } });
+    return docentes.map(d => ({ id: d.id, clave: d.claveEmpleado, nombre: d.user?.email.split('@')[0].toUpperCase() || 'DOCENTE', email: d.user?.email, especialidad: d.especialidad }));
+  }
+
+  async createDocente(dto: CreateDocenteDto, schoolId: string) {
+    const newUser = await this.userRepository.save(this.userRepository.create({ email: dto.email, password: dto.clave, rol: UserRole.DOCENTE, school: { id: schoolId } }));
+    return await this.teacherProfileRepo.save(this.teacherProfileRepo.create({ claveEmpleado: dto.clave, especialidad: dto.especialidad, telefono: dto.telefono, tituloAcademico: 'Lic.', user: newUser }));
+  }
+
+  async getDocenteProfileById(id: string) {
+    const d = await this.teacherProfileRepo.findOne({ where: { id }, relations: ['user', 'courses', 'courses.subject', 'courses.group'] });
+    if (!d) throw new NotFoundException('Docente no encontrado');
+    const materiasAsignadas = d.courses?.map(c => ({ id: c.id, nombre: c.subject?.nombre || 'Materia', grupo: c.group?.nombre || 'Sin grupo' })) || [];
     return {
-      totalStudents: this.students.length,
-      totalTeachers: this.teachers.length,
-      totalGroups: this.groups.length
+      id: d.id, clave: d.claveEmpleado, nombre: d.user?.email.split('@')[0].toUpperCase() || 'DOCENTE', email: d.user?.email, telefono: d.telefono, especialidad: d.especialidad,
+      materiasAsignadas, horario: d.habilidades ? JSON.parse(d.habilidades) : { Lunes: {}, Martes: {}, Miercoles: {}, Jueves: {}, Viernes: {} }
     };
   }
 
-  // --- MÉTODOS DE DOCENTES (NUEVO) ---
-
-  findAllTeachers(): ITeacher[] {
-    return this.teachers;
+  async updateDocenteProfile(id: string, data: any) {
+    const profile = await this.teacherProfileRepo.findOne({ where: { id }, relations: ['user'] });
+    if (!profile) throw new NotFoundException('Perfil no encontrado');
+    if (data.clave) profile.claveEmpleado = data.clave;
+    if (data.especialidad) profile.especialidad = data.especialidad;
+    if (data.telefono) profile.telefono = data.telefono;
+    if (data.horario) profile.habilidades = JSON.stringify(data.horario);
+    if (data.email && profile.user) { profile.user.email = data.email; await this.userRepository.save(profile.user); }
+    return await this.teacherProfileRepo.save(profile);
   }
 
-  // Lógica para la modal "Registrar Nuevo Docente"
-  createTeacher(dto: any): ITeacher {
-    const newTeacher: ITeacher = {
-      id: Math.random().toString(36).substr(2, 9),
-      clave: dto.clave,
-      nombre: dto.nombre,
-      email: dto.email,
-      telefono: dto.telefono,
-      especialidad: dto.especialidad
-    };
-    this.teachers.push(newTeacher);
-    return newTeacher;
+  async deleteDocente(docenteId: string) {
+    const profile = await this.teacherProfileRepo.findOne({ where: { id: docenteId }, relations: ['user'] });
+    if (profile && profile.user) await this.userRepository.delete(profile.user.id);
+    return { status: 'success' };
   }
 
-  // Lógica para eliminar perfil de docente
-  removeTeacher(id: string): boolean {
-    const initialLength = this.teachers.length;
-    this.teachers = this.teachers.filter(t => t.id !== id);
-    return this.teachers.length < initialLength;
+  // --- ALUMNOS ---
+  async getStudentsByGroup(groupId: string) {
+    const ins = await this.enrollmentRepo.find({ where: { group: { id: groupId } }, relations: ['student', 'student.user'] });
+    return ins.map((i, idx) => ({ id: i.student?.id, numero: idx + 1, matricula: i.student?.matricula || 'S/M', nombre: i.student?.user?.email || 'N/A' }));
   }
 
-  // --- MÉTODOS DE GRUPOS ---
-
-  findAll(): IGroup[] { return this.groups; }
-
-  create(dto: CreateGroupDto): IGroup {
-    const newGroup: IGroup = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...dto,
-      nombreCompleto: `GRUPO ${dto.grado}${dto.letra.toUpperCase()}`
-    };
-    this.groups.push(newGroup);
-    return newGroup;
+  async addStudentToGroup(dto: AddStudentDto, schoolId: string) {
+    const email = `${dto.matricula.toLowerCase()}@escuela.com`;
+    const user = await this.userRepository.save(this.userRepository.create({ email, password: dto.matricula, rol: UserRole.ALUMNO, school: { id: schoolId } }));
+    const profile = await this.studentProfileRepo.save(this.studentProfileRepo.create({ 
+      matricula: dto.matricula, curp: `TEMP-${dto.matricula}`, fechaNacimiento: new Date(), genero: 'N/A', telefono: '000', direccion: 'PENDIENTE', gradoActual: '1', user 
+    }));
+    return await this.enrollmentRepo.save({ student: profile, group: { id: dto.grupoId } as any, fechaInscripcion: new Date() } as any);
   }
 
-  update(id: string, dto: any): IGroup | null {
-    const index = this.groups.findIndex(g => g.id === id);
-    if (index !== -1) {
-      this.groups[index] = { 
-        ...this.groups[index], 
-        ...dto,
-        nombreCompleto: `GRUPO ${dto.grado || this.groups[index].grado}${dto.letra || this.groups[index].letra}`
-      };
-      return this.groups[index];
-    }
-    return null;
+  async getStudentAcademicHistory(studentId: string) {
+    const student = await this.studentProfileRepo.findOne({ where: { id: studentId }, relations: ['user'] });
+    if (!student) throw new NotFoundException('Alumno no encontrado');
+    const ins = await this.enrollmentRepo.find({ where: { student: { id: studentId } }, relations: ['group', 'group.period'] });
+    const b = await this.gradeCardRepo.find({ where: { enrollment: { student: { id: studentId } } }, relations: ['course', 'course.subject', 'course.group', 'course.group.period'] });
+    const c = b.map(x => ({ materia: x.course?.subject?.nombre || 'Materia', calificacion: Number(x.promedioFinal || 0), asistencia: `${x.porcentajeAsistenciaGlobal || 0}%`, ciclo: x.course?.group?.period?.nombre || 'N/A' }));
+    const prom = c.length > 0 ? c.reduce((acc, curr) => acc + curr.calificacion, 0) / c.length : 0;
+    return { alumno: { id: student.id, nombre: student.user?.email.split('@')[0].toUpperCase(), matricula: student.matricula }, inscripciones: ins.map(e => ({ ciclo: e.group?.period?.nombre || 'N/A', estado: 'Completado', fecha: e.fechaInscripcion })), calificaciones: c, promedioGeneral: prom.toFixed(1) };
   }
 
-  remove(id: string): boolean {
-    const initialLength = this.groups.length;
-    this.groups = this.groups.filter(group => group.id !== id);
-    return this.groups.length < initialLength;
-  }
-
-  // --- MÉTODOS DE ESTUDIANTES ---
-
-  getStudentsByGroup(groupId: string): IStudent[] {
-    return this.students.filter(s => s.groupId === groupId);
-  }
-
-  getStudentById(id: string): IStudent | null {
-    const student = this.students.find(s => s.id === id);
-    if (!student) return null;
-
-    return {
-      ...student,
-      promedio: student.promedio || 8.5,
-      faltas: student.faltas || 4,
-      asistencias: student.asistencias || 42,
-      pagos: [
-        { id: 1, concepto: 'Matrícula Semestral', fecha: '15/01/2024', monto: 5000, estado: 'Pagado' },
-        { id: 2, concepto: 'Mensualidad Enero', fecha: '05/01/2024', monto: 2500, estado: 'Pagado' },
-        { id: 3, concepto: 'Mensualidad Febrero', fecha: 'Pendiente', monto: 2500, estado: 'Pendiente' }
-      ],
-      solicitudes: [
-        { id: 1, tipo: 'Constancia de Estudios', fecha: '20/01/2024', estado: 'Aprobada' },
-        { id: 2, tipo: 'Justificación de Falta', fecha: '18/01/2024', estado: 'En revisión' }
-      ]
-    };
-  }
-
-  createStudent(dto: any): IStudent {
-    const newStudent: IStudent = {
-      id: Math.random().toString(36).substr(2, 9),
-      matricula: dto.matricula,
-      nombre: dto.nombre,
-      groupId: dto.groupId,
-      correo: '',
-      telefono: '',
-      direccion: '',
-      curp: '',
-      tutor: ''
-    };
-    this.students.push(newStudent);
-    return newStudent;
-  }
-
-  updateStudent(id: string, dto: any): IStudent | null {
-    const index = this.students.findIndex(s => s.id === id);
-    if (index !== -1) {
-      this.students[index] = { ...this.students[index], ...dto };
-      return this.students[index];
-    }
-    return null;
-  }
-
-  async getStudentListPDF(groupId: string): Promise<Buffer> {
-    return Buffer.from(`Lista oficial de asistencia - Grupo ${groupId}`);
-  }
-
-  async getStudentHistoryPDF(id: string): Promise<Buffer> {
-    const student = this.getStudentById(id);
-    return Buffer.from(`Historial Académico Completo - ${student?.nombre}`);
-  }
-
-  // --- MÉTODOS DE MENSAJES ---
-
-  sendMessage(dto: SendMessageDto) {
-    const newMessage: IMessage = {
-      id: Date.now(),
-      fecha: new Date().toISOString(),
-      ...dto
-    };
-    this.messages.push(newMessage);
-    return { success: true, message: 'Comunicado enviado correctamente' };
-  }
-
-  getMessageHistory(): IMessage[] { return this.messages; }
-
-  // --- MÉTODOS DE GESTIÓN ACADÉMICA ---
-
-  createPlan(dto: any): IPlan {
-    const newPlan: IPlan = {
-      id: Math.random().toString(36).substr(2, 9),
-      nombre: dto.nombre,
-      codigo: dto.codigo,
-      fechaInicio: dto.fechaInicio,
-      fechaFin: dto.fechaFin
-    };
-    this.plans.push(newPlan);
-    return newPlan;
-  }
-
-  findAllPlans(): IPlan[] { return this.plans; }
-
-  updatePlan(id: string, dto: any): IPlan | null {
-    const index = this.plans.findIndex(p => p.id === id);
-    if (index !== -1) {
-      this.plans[index] = { ...this.plans[index], ...dto };
-      return this.plans[index];
-    }
-    return null;
-  }
-
-  removePlan(id: string): boolean {
-    const initialLength = this.plans.length;
-    this.plans = this.plans.filter(p => p.id !== id);
-    this.subjects = this.subjects.filter(s => s.planId !== id);
-    return this.plans.length < initialLength;
-  }
-
-  createSubject(dto: any): ISubject {
-    const newSubject: ISubject = {
-      id: Math.random().toString(36).substr(2, 9),
-      nombre: dto.nombre,
-      codigo: dto.codigo,
-      planId: dto.planId 
-    };
-    this.subjects.push(newSubject);
-    return newSubject;
-  }
-
-  getSubjectsByPlan(planId: string): ISubject[] {
-    return this.subjects.filter(s => s.planId === planId);
-  }
-
-  updateSubject(id: string, dto: any): ISubject | null {
-    const index = this.subjects.findIndex(s => s.id === id);
-    if (index !== -1) {
-      this.subjects[index] = { ...this.subjects[index], ...dto };
-      return this.subjects[index];
-    }
-    return null;
-  }
-
-  removeSubject(id: string): boolean {
-    const initialLength = this.subjects.length;
-    this.subjects = this.subjects.filter(s => s.id !== id);
-    return this.subjects.length < initialLength;
-  }
-
-  // --- MÉTODOS DE REPORTES ---
-
-  generateAcademicReport(query: ReportQueryDto): IReportEntry[] {
-    const mockData: IReportEntry[] = [
-      { matricula: 'A001', nombreAlumno: 'Juan Pérez López', calificacion: 9.5, asistencia: '95%' },
-      { matricula: 'A002', nombreAlumno: 'María González Ruiz', calificacion: 8.0, asistencia: '100%' }
-    ];
-
-    if (query.alumnoMatricula) {
-      return mockData.filter(s => s.matricula === query.alumnoMatricula);
-    }
-    return mockData;
-  }
-
-  async getReportPDF(query: ReportQueryDto): Promise<Buffer> {
-    return Buffer.from('Contenido binario del reporte PDF'); 
+  async exportStudentAcademicHistory(studentId: string): Promise<string> {
+    const data = await this.getStudentAcademicHistory(studentId);
+    let csv = `Alumno:,${data.alumno.nombre}\nMateria,Ciclo,Calificacion,Asistencia\n`;
+    data.calificaciones.forEach(c => { csv += `${c.materia},${c.ciclo},${c.calificacion},${c.asistencia}\n`; });
+    return csv;
   }
 }

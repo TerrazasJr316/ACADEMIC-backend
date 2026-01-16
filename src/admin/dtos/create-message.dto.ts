@@ -1,6 +1,4 @@
-export interface IMessage {
-  id: number;
-  fecha: string;
+export class CreateMessageDto {
   destinatario: string;
   asunto: string;
   cuerpo: string;
