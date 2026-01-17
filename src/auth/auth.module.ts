@@ -17,7 +17,8 @@ import { LocalStrategy } from './strategies/local.strategy';
 
     // 3. Configuramos la máquina de Tokens (JWT)
     JwtModule.register({
-      secret: 'MI_SECRETO_SUPER_SECRETO', // EN PRODUCCIÓN ESTO VA EN .ENV
+      // ¡AQUI ESTABA EL ERROR! Ahora usa la misma clave que la Estrategia
+      secret: process.env.JWT_SECRET || '428ec0f41dd5af3c71a1964bcfb59723', 
       signOptions: { expiresIn: '1d' }, // El token dura 1 día
     }),
   ],

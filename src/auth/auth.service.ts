@@ -47,28 +47,22 @@ export class AuthService {
   // --- GENERAR TOKEN DE ACCESO ---
 
   async login(user: any) {
-    const payload = { 
-      email: user.email, 
-      sub: user.id, 
-      rol: user.rol,
-
-      schoolId: user.school?.id // Dato vital para filtrar alumnos/maestros después
-    };
-
-    return {
-      access_token: this.jwtService.sign(payload),
-      user: { 
-        id: user.id,
-
-        fullName: user.fullName,
-        email: user.email,
+      const payload = { 
+        sub: user.id, 
         rol: user.rol,
-        schoolName: user.school?.nombreEscuela,
-        isActive: user.school?.isActive // Dato útil para el front
-      }
-    };
-  }
+        schoolId: user.school?.id // Dato vital para filtrar alumnos/maestros después
+      };
 
+      return {
+        access_token: this.jwtService.sign(payload),
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          rol: user.rol
+        }
+      };
+    }
   // --- LÓGICA DE RECUPERACIÓN DE CONTRASEÑA ---
 
   async requestPasswordReset(email: string) {
