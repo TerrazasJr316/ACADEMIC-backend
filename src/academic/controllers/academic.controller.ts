@@ -9,7 +9,11 @@ import {
   Patch,
   Put,
 } from '@nestjs/common';
-import { AcademicService } from '../service/academic.service';
+import {
+  AcademicService,
+  GradeInput,
+  UpdateProfileDto,
+} from '../service/academic.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../auth/roles.guard';
 
@@ -51,9 +55,8 @@ export class AcademicController {
 
   @Post('grades/capture/:courseId')
   saveGrades(@Param('courseId') courseId: string, @Body() grades: any[]) {
-    // grades entra como any[] porque es una estructura compleja del front,
-    // pero el servicio lo validará.
-    return this.academicService.saveGrades(courseId, grades);
+    // Convertimos 'any[]' a 'GradeInput[]' de forma segura para el servicio
+    return this.academicService.saveGrades(courseId, grades as GradeInput[]);
   }
 
   // --- ASISTENCIA ---
@@ -76,8 +79,11 @@ export class AcademicController {
 
   @Put('profile')
   updateProfile(@Request() req: RequestWithUser, @Body() body: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    return this.academicService.updateProfile(req.user.userId, body);
+    // Convertimos el body genérico al DTO esperado
+    return this.academicService.updateProfile(
+      req.user.userId,
+      body as UpdateProfileDto,
+    );
   }
 
   // --- MENSAJES ---
