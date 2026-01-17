@@ -31,7 +31,6 @@ interface RequestWithUser {
 export class AcademicController {
   constructor(private readonly academicService: AcademicService) {}
 
-  // --- DASHBOARD & GRUPOS ---
   @Get('teacher-load')
   getTeacherLoad(@Request() req: RequestWithUser) {
     return this.academicService.getTeacherLoad(req.user.userId);
@@ -47,7 +46,6 @@ export class AcademicController {
     return this.academicService.getTeacherGroups(req.user.userId);
   }
 
-  // --- CALIFICACIONES ---
   @Get('grades/list/:courseId')
   getGradesList(@Param('courseId') courseId: string) {
     return this.academicService.getStudentsForGrading(courseId);
@@ -59,7 +57,6 @@ export class AcademicController {
     return this.academicService.saveGrades(courseId, grades as GradeInput[]);
   }
 
-  // --- ASISTENCIA ---
   @Get('attendance/students/:groupId')
   getStudentsForAttendance(@Param('groupId') groupId: string) {
     return this.academicService.getStudentsForAttendance(groupId);
@@ -71,7 +68,6 @@ export class AcademicController {
     return this.academicService.saveAttendanceBatch(body);
   }
 
-  // --- PERFIL ---
   @Get('profile')
   getProfile(@Request() req: RequestWithUser) {
     return this.academicService.getProfile(req.user.userId);
@@ -79,14 +75,12 @@ export class AcademicController {
 
   @Put('profile')
   updateProfile(@Request() req: RequestWithUser, @Body() body: any) {
-    // Convertimos el body genérico al DTO esperado
     return this.academicService.updateProfile(
       req.user.userId,
       body as UpdateProfileDto,
     );
   }
 
-  // --- MENSAJES ---
   @Get('messages/inbox')
   getInbox(@Request() req: RequestWithUser) {
     return this.academicService.getInbox(req.user.userId);

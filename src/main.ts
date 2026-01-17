@@ -6,9 +6,8 @@ async function bootstrap() {
     rawBody: true,
   });
 
-  // Configuración agresiva de CORS
   app.enableCors({
-    origin: '*', // Permite peticiones desde cualquier lugar (incluyendo tu puerto 5173 de Vite)
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Accept, Authorization',
     credentials: true,

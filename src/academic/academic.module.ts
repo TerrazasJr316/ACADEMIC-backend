@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AcademicService } from './service/academic.service';
 import { AcademicController } from './controllers/academic.controller';
 
-// Entidades
 import { TeacherProfile } from '../teacher/entities/teacher-profile.entity';
 import { Course } from './entities/course.entity';
 import { GradeCard } from './entities/grade-card.entity';

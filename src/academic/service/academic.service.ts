@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 
-// Entidades
 import { TeacherProfile } from '../../teacher/entities/teacher-profile.entity';
 import { Course } from '../entities/course.entity';
 import { GradeCard } from '../entities/grade-card.entity';
@@ -15,7 +14,6 @@ import { User } from '../../users/entities/user.entity';
 
 type RendimientoMateria = { materia: string; promedio: number };
 
-// Interfaz para los datos de entrada de calificaciones
 export interface GradeInput {
   id: string;
   parcial1: string | number;
@@ -25,7 +23,6 @@ export interface GradeInput {
   extraordinario?: string | number | null;
 }
 
-// Interfaz para evitar 'any' en updateProfile
 export interface UpdateProfileDto {
   tituloAcademico?: string;
   especialidad?: string;
@@ -54,33 +51,34 @@ export class AcademicService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {}
 
-  // ==========================================
-  // 🎓 SECCIÓN 1: ACADÉMICA (Grupos, Notas)
-  // ==========================================
+  // SECCIÓN 1: ACADÉMICA (Grupos, Notas)
 
   async getTeacherLoad(teacherId: string) {
     return this.courseRepo.find({
       where: { teacher: { user: { id: teacherId } } },
       relations: ['subject', 'group', 'schedules'],
+      order: { id: 'DESC' },
     });
   }
 
   async getTeacherGroups(teacherId: string) {
-    const courses = await this.courseRepo.find({
-      where: { teacher: { user: { id: teacherId } } },
-      relations: ['group'],
-    });
-    const uniqueGroups = new Map<string, Group>();
-    courses.forEach((c) => {
-      if (c.group) uniqueGroups.set(c.group.id, c.group);
-    });
-    return Array.from(uniqueGroups.values());
+    const groups = await this.courseRepo
+      .createQueryBuilder('course')
+      .leftJoinAndSelect('course.group', 'group')
+      .leftJoin('course.teacher', 'teacher')
+      .leftJoin('teacher.user', 'user')
+      .where('user.id = :teacherId', { teacherId })
+      .select(['group.id', 'group.nombre'])
+      .distinct(true)
+      .getRawMany();
+
+    return groups.map((g: { group_id: string; group_nombre: string }) => ({
+      id: g.group_id,
+      nombre: g.group_nombre,
+    }));
   }
 
   async getStudentsForGrading(courseId: string) {
-    const course = await this.courseRepo.findOne({ where: { id: courseId } });
-    if (!course) throw new NotFoundException('Curso no encontrado');
-
     const grades = await this.gradeRepo.find({
       where: { course: { id: courseId } },
       relations: [
@@ -88,6 +86,7 @@ export class AcademicService {
         'enrollment.student',
         'enrollment.student.user',
       ],
+      order: { enrollment: { student: { user: { fullName: 'ASC' } } } },
     });
 
     return grades.map((g) => ({
@@ -103,35 +102,30 @@ export class AcademicService {
   }
 
   async saveGrades(courseId: string, gradesData: GradeInput[]) {
-    const savedGrades: GradeCard[] = [];
-    for (const item of gradesData) {
-      const gradeCard = await this.gradeRepo.findOne({
-        where: { id: item.id },
+    const promises = gradesData.map(async (item) => {
+      return this.gradeRepo.update(item.id, {
+        parcial1: Number(item.parcial1 || 0),
+        parcial2: Number(item.parcial2 || 0),
+        parcial3: Number(item.parcial3 || 0),
+        promedioFinal: Number(item.final || 0),
+        extraordinario:
+          item.extraordinario && item.extraordinario !== 'NA'
+            ? Number(item.extraordinario)
+            : null,
       });
-      if (!gradeCard) continue;
+    });
 
-      gradeCard.parcial1 = Number(item.parcial1 || 0);
-      gradeCard.parcial2 = Number(item.parcial2 || 0);
-      gradeCard.parcial3 = Number(item.parcial3 || 0);
-      gradeCard.promedioFinal = Number(item.final || 0);
-      gradeCard.extraordinario =
-        item.extraordinario && item.extraordinario !== 'NA'
-          ? Number(item.extraordinario)
-          : null;
-
-      savedGrades.push(await this.gradeRepo.save(gradeCard));
-    }
-    return { message: 'Calificaciones guardadas', count: savedGrades.length };
+    await Promise.all(promises);
+    return { message: 'Calificaciones guardadas', count: gradesData.length };
   }
 
-  // ==========================================
-  // 📝 SECCIÓN 2: ASISTENCIA (Pantalla Asistencia)
-  // ==========================================
+  // SECCIÓN 2: ASISTENCIA
 
   async getStudentsForAttendance(groupId: string) {
     return this.enrollmentRepo.find({
       where: { group: { id: groupId } },
       relations: ['student', 'student.user'],
+      order: { student: { user: { fullName: 'ASC' } } },
     });
   }
 
@@ -140,10 +134,9 @@ export class AcademicService {
     fecha: string;
     asistencias: { studentId: string; status: string }[];
   }) {
-    const registros: AttendanceDetail[] = [];
-
     const course = await this.courseRepo.findOne({
       where: { group: { id: data.grupoId } },
+      select: ['id'],
     });
 
     if (!course) {
@@ -152,23 +145,20 @@ export class AcademicService {
       );
     }
 
-    for (const item of data.asistencias) {
-      const registro = this.attendanceRepo.create({
+    const registros = data.asistencias.map((item) =>
+      this.attendanceRepo.create({
         fecha: new Date(data.fecha),
         estado: item.status as AttendanceStatus,
         enrollment: { id: item.studentId } as Enrollment,
-        course: course,
-      });
-      registros.push(registro);
-    }
+        course: { id: course.id } as Course,
+      }),
+    );
 
     await this.attendanceRepo.save(registros);
     return { success: true, count: registros.length };
   }
 
-  // ==========================================
-  // 👤 SECCIÓN 3: PERFIL (Pantalla Perfil)
-  // ==========================================
+  // SECCIÓN 3: PERFIL
 
   async getProfile(userId: string) {
     return this.teacherRepo.findOne({
@@ -178,34 +168,23 @@ export class AcademicService {
   }
 
   async updateProfile(userId: string, data: UpdateProfileDto) {
-    const profile = await this.teacherRepo.findOne({
-      where: { user: { id: userId } },
-    });
-    if (!profile) throw new NotFoundException('Perfil no encontrado');
-
-    if (data.tituloAcademico !== undefined)
-      profile.tituloAcademico = data.tituloAcademico;
-    if (data.especialidad !== undefined)
-      profile.especialidad = data.especialidad;
-    if (data.habilidades !== undefined) profile.habilidades = data.habilidades;
-    if (data.telefono !== undefined) profile.telefono = data.telefono;
-    if (data.ciudad !== undefined) profile.ciudad = data.ciudad;
-    if (data.direccion !== undefined) profile.direccion = data.direccion;
-    if (data.claveEmpleado !== undefined)
-      profile.claveEmpleado = data.claveEmpleado;
-
-    return this.teacherRepo.save(profile);
+    const result = await this.teacherRepo.update(
+      { user: { id: userId } },
+      data,
+    );
+    if (result.affected === 0)
+      throw new NotFoundException('Perfil no encontrado');
+    return { success: true };
   }
 
-  // ==========================================
-  // 📨 SECCIÓN 4: MENSAJES (Pantalla Mensajes)
-  // ==========================================
+  // 📨 SECCIÓN 4: MENSAJES
 
   async getInbox(userId: string) {
     return this.msgRepo.find({
       where: { destinatario: { id: userId } },
       relations: ['remitente'],
       order: { fechaEnvio: 'DESC' },
+      take: 50,
     });
   }
 
@@ -214,6 +193,7 @@ export class AcademicService {
       where: { remitente: { id: userId } },
       relations: ['destinatario'],
       order: { fechaEnvio: 'DESC' },
+      take: 50,
     });
   }
 
@@ -225,6 +205,7 @@ export class AcademicService {
   ) {
     const receiver = await this.userRepo.findOne({
       where: { email: destEmail },
+      select: ['id'],
     });
     if (!receiver) throw new NotFoundException('Destinatario no encontrado');
 
@@ -242,9 +223,7 @@ export class AcademicService {
     return this.msgRepo.update(msgId, { leido: true });
   }
 
-  // ==========================================
-  // 📊 SECCIÓN 5: ESTADÍSTICAS
-  // ==========================================
+  // SECCIÓN 5: ESTADÍSTICAS
 
   async getTeacherStats(userId: string) {
     const courses = await this.courseRepo.find({
@@ -255,9 +234,10 @@ export class AcademicService {
     if (courses.length === 0) return this.getEmptyStats();
 
     const courseIds = courses.map((c) => c.id);
-    let totalAlumnos = 0,
-      sumaPromedios = 0,
-      aprobados = 0;
+
+    let totalAlumnos = 0;
+    let sumaPromedios = 0;
+    let aprobados = 0;
     const rendimientoMateria: RendimientoMateria[] = [];
 
     for (const course of courses) {
@@ -282,12 +262,14 @@ export class AcademicService {
       sumaPromedios += promMateria;
     }
 
-    let asistenciaPromedio = 0,
-      estudiantesAsistenciaCritica = 0;
     const asistencias = await this.attendanceRepo.find({
       where: { course: { id: In(courseIds) } },
+      select: ['estado', 'enrollment'],
       relations: ['enrollment'],
     });
+
+    let asistenciaPromedio = 0;
+    let estudiantesAsistenciaCritica = 0;
 
     if (asistencias.length > 0) {
       const presentes = asistencias.filter(
@@ -301,23 +283,27 @@ export class AcademicService {
         string,
         { total: number; presentes: number }
       >();
-      asistencias.forEach((a) => {
-        const enrollmentId = a.enrollment ? a.enrollment.id : 'unknown';
-        if (!asistenciaPorAlumno.has(enrollmentId))
+
+      for (const a of asistencias) {
+        const enrollmentId = a.enrollment?.id || 'unknown';
+        if (!asistenciaPorAlumno.has(enrollmentId)) {
           asistenciaPorAlumno.set(enrollmentId, { total: 0, presentes: 0 });
+        }
         const curr = asistenciaPorAlumno.get(enrollmentId)!;
         curr.total++;
         if (
           a.estado === AttendanceStatus.ASISTENCIA ||
           a.estado === AttendanceStatus.RETARDO
-        )
+        ) {
           curr.presentes++;
-      });
+        }
+      }
 
-      asistenciaPorAlumno.forEach((val) => {
-        if ((val.presentes / val.total) * 100 < 80)
+      for (const val of asistenciaPorAlumno.values()) {
+        if ((val.presentes / val.total) * 100 < 80) {
           estudiantesAsistenciaCritica++;
-      });
+        }
+      }
     }
 
     const promedioGlobal =
