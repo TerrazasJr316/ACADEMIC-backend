@@ -16,13 +16,24 @@ import { User } from '../../users/entities/user.entity';
 type RendimientoMateria = { materia: string; promedio: number };
 
 // Interfaz para los datos de entrada de calificaciones
-interface GradeInput {
+export interface GradeInput {
   id: string;
   parcial1: string | number;
   parcial2: string | number;
   parcial3: string | number;
   final: string | number;
   extraordinario?: string | number | null;
+}
+
+// Interfaz para evitar 'any' en updateProfile
+export interface UpdateProfileDto {
+  tituloAcademico?: string;
+  especialidad?: string;
+  habilidades?: string;
+  telefono?: string;
+  ciudad?: string;
+  direccion?: string;
+  claveEmpleado?: string;
 }
 
 @Injectable()
@@ -166,20 +177,22 @@ export class AcademicService {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async updateProfile(userId: string, data: any) {
+  async updateProfile(userId: string, data: UpdateProfileDto) {
     const profile = await this.teacherRepo.findOne({
       where: { user: { id: userId } },
     });
     if (!profile) throw new NotFoundException('Perfil no encontrado');
 
-    if (data.tituloAcademico) profile.tituloAcademico = data.tituloAcademico;
-    if (data.especialidad) profile.especialidad = data.especialidad;
-    if (data.habilidades) profile.habilidades = data.habilidades;
-    if (data.telefono) profile.telefono = data.telefono;
-    if (data.ciudad) profile.ciudad = data.ciudad;
-    if (data.direccion) profile.direccion = data.direccion;
-    if (data.claveEmpleado) profile.claveEmpleado = data.claveEmpleado;
+    if (data.tituloAcademico !== undefined)
+      profile.tituloAcademico = data.tituloAcademico;
+    if (data.especialidad !== undefined)
+      profile.especialidad = data.especialidad;
+    if (data.habilidades !== undefined) profile.habilidades = data.habilidades;
+    if (data.telefono !== undefined) profile.telefono = data.telefono;
+    if (data.ciudad !== undefined) profile.ciudad = data.ciudad;
+    if (data.direccion !== undefined) profile.direccion = data.direccion;
+    if (data.claveEmpleado !== undefined)
+      profile.claveEmpleado = data.claveEmpleado;
 
     return this.teacherRepo.save(profile);
   }
