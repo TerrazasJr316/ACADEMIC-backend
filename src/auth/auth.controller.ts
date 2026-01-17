@@ -1,10 +1,21 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
-// Creamos un DTO rápido aquí mismo (o puedes hacerlo en archivo aparte)
+// DTO para Login
 class LoginDto {
   email: string;
   password: string;
+}
+
+// DTO para Solicitar Recuperación
+class ForgotPasswordDto {
+  email: string;
+}
+
+// DTO para Cambiar Contraseña
+class ResetPasswordDto {
+  token: string;
+  newPassword: string;
 }
 
 @Controller('auth')
@@ -13,7 +24,6 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
-    // 1. Preguntamos al servicio si las credenciales son válidas
     const user = await this.authService.validateUser(
       loginDto.email, 
       loginDto.password
@@ -23,7 +33,20 @@ export class AuthController {
       throw new UnauthorizedException('Credenciales incorrectas');
     }
 
-    // 2. Si son válidas, generamos y entregamos el Token
     return this.authService.login(user);
+  }
+
+  // 👇 1. SOLICITUD: El usuario envía su correo
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() body: ForgotPasswordDto) {
+    return this.authService.requestPasswordReset(body.email);
+  }
+
+  // 👇 2. RESTABLECIMIENTO: El usuario envía el token y la nueva clave
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: ResetPasswordDto) {
+    return this.authService.resetPassword(body.token, body.newPassword);
   }
 }

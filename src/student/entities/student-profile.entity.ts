@@ -1,21 +1,26 @@
 // src/student/entities/student-profile.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-// import { StudentPayment } from '../../finance/entities/student-payment.entity'; // 🚧 PENDIENTE
-// import { Enrollment } from '../../academic/entities/enrollment.entity'; // 🚧 PENDIENTE
+//import { StudentPayment } from '../../finance/entities/student-payment.entity'; // 👈 YA DESCOMENTADO
+//import { Enrollment } from '../../academic/entities/enrollment.entity'; // 👈 YA DESCOMENTADO
 
 @Entity('perfiles_alumno')
 export class StudentProfile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // RELACIÓN 1 a 1 con Usuario (ESTA ES LA IMPORTANTE)
+  // RELACIÓN 1 a 1 con Usuario
   @OneToOne(() => User, (user) => user.studentProfile)
   @JoinColumn({ name: 'id_usuario' })
   user: User;
 
   @Column({ name: 'matricula', unique: true })
   matricula: string;
+
+  // 👇 ESTA ES LA NUEVA COLUMNA QUE NECESITAS PARA EL NOMBRE 👇
+  @Column({ name: 'nombre_completo', length: 150, nullable: true })
+  nombreCompleto: string;
+  // 👆 FIN DE LO NUEVO 👆
 
   @Column({ length: 18, unique: true })
   curp: string;
@@ -36,16 +41,10 @@ export class StudentProfile {
   tipoSangre: string;
 
   @Column({ name: 'grado_actual' })
+  gradoActual: string; 
 
-  gradoActual: string; // Ej: "3er Semestre"
-
-  /* QUITAR COMENTARIO CUANDO SE MODIFIQUE ESTA PARTE
-=======
-  gradoActual: string;
-
-  // 🚧 RELACIONES FUTURAS (Descomentar en FASE 4)
+  // 👇 RELACIONES NECESARIAS PARA QUE EL ADMIN.SERVICE NO FALLE 👇
   /*
->>>>>>> 69312ab4c44766b79408286a91d02476538e2950
   @OneToMany(() => StudentPayment, (payment) => payment.student)
   payments: StudentPayment[];
 

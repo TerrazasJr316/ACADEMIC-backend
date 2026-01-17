@@ -17,7 +17,6 @@ export class AdminController {
   @Get('dashboard')
   getDash(@Request() req) { return this.adminService.getDashboardData(req.user.schoolId, req.user.userId); }
 
-  // --- GRUPOS Y ALUMNOS ---
   @Get('grupos')
   getGrupos(@Request() req) { return this.adminService.getGroups(req.user.schoolId); }
 
@@ -40,7 +39,6 @@ export class AdminController {
     res.send('\ufeff' + csv);
   }
 
-  // --- DOCENTES ---
   @Get('docentes')
   getDocs(@Request() req) { return this.adminService.getDocentes(req.user.schoolId); }
 
@@ -55,4 +53,13 @@ export class AdminController {
 
   @Delete('docentes/:id')
   delDoc(@Param('id') id: string) { return this.adminService.deleteDocente(id); }
+
+  @Post('ciclos')
+  saveCiclo(@Body() body: any, @Request() req) { return this.adminService.createPeriod(body, req.user.schoolId); }
+
+  // RUTA PARA ACTIVAR CICLO
+  @Patch('ciclos/:id/activar')
+  activarCiclo(@Param('id') id: string, @Request() req) { 
+    return this.adminService.setActualPeriod(id, req.user.schoolId); 
+  }
 }
