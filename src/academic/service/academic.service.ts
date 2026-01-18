@@ -50,10 +50,9 @@ export class AcademicService {
   ) { }
 
 
-  async getStudentCourses(studentId: string) {
-    // 1. Buscamos inscripciones del alumno
+  async getStudentCourses(userId: string) { // Recibimos userId
     const enrollments = await this.enrollmentRepo.find({
-      where: { student: { id: studentId } },
+      where: { student: { user: { id: userId } } }, // 👈 Buscamos por la relación con User
       relations: ['group'],
     });
 
@@ -77,10 +76,10 @@ export class AcademicService {
     }));
   }
 
-  async getStudentGradesByPeriod(studentId: string, periodoNombre: string) {
+  async getStudentGradesByPeriod(userId: string, periodoNombre: string) {
     const grades = await this.gradeRepo.find({
       where: {
-        enrollment: { student: { id: studentId } },
+        enrollment: { student: { user: { id: userId } } }, // 👈 Buscamos por User
         course: { group: { period: { nombre: periodoNombre } } },
       },
       relations: ['course', 'course.subject'],
@@ -97,22 +96,19 @@ export class AcademicService {
     }));
   }
 
-  async getStudentAttendance(studentId: string) {
+  async getStudentAttendance(userId: string) {
     const asistencias = await this.attendanceRepo.find({
-      where: { enrollment: { student: { id: studentId } } },
+      where: { enrollment: { student: { user: { id: userId } } } },
+      // 🔥 AGREGAMOS RELACIONES para obtener el nombre de la materia
+      relations: ['course', 'course.subject'],
       order: { fecha: 'DESC' },
     });
 
-    const faltas = asistencias.filter(
-      (a) => a.estado === AttendanceStatus.FALTA,
-    ).length;
-    const retardos = asistencias.filter(
-      (a) => a.estado === AttendanceStatus.RETARDO,
-    ).length;
+    const faltas = asistencias.filter((a) => a.estado === AttendanceStatus.FALTA).length;
+    const retardos = asistencias.filter((a) => a.estado === AttendanceStatus.RETARDO).length;
     const total = asistencias.length;
 
-    const porcentaje =
-      total > 0 ? Math.round(((total - faltas) / total) * 100) : 100;
+    const porcentaje = total > 0 ? Math.round(((total - faltas) / total) * 100) : 100;
 
     return {
       estadisticas: {
@@ -120,10 +116,15 @@ export class AcademicService {
         faltas: faltas,
         retardos: retardos,
       },
+      // 👇 ENRIQUECEMOS LA LISTA DE DETALLES
       fechas: asistencias
-        .filter((a) => a.estado !== AttendanceStatus.ASISTENCIA)
+        .filter((a) => a.estado !== AttendanceStatus.ASISTENCIA) // Filtramos solo incidencias
         .map((a) => ({
+          id: a.id,
           fecha: new Date(a.fecha).toISOString().split('T')[0],
+          // Mapeamos el nombre de la materia
+          materia: a.course?.subject?.nombre || 'Materia Desconocida',
+          // Mapeamos el estado (Falta/Retardo) para el front
           tipo: a.estado === AttendanceStatus.FALTA ? 'Falta' : 'Retardo',
         })),
       recordatorios: [
