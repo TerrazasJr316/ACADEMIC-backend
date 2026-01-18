@@ -1,9 +1,9 @@
 import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../users/entities/user.entity'; 
-import * as bcrypt from 'bcrypt'; 
-import { JwtService } from '@nestjs/jwt'; 
+import { User } from '../users/entities/user.entity';
+import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
@@ -13,36 +13,30 @@ export class AuthService {
     private readonly jwtService: JwtService 
   ) {}
 
-  // --- 1. VALIDACIÓN DE CREDENCIALES (ADMIN, DOCENTE, ALUMNO) ---
   async validateUser(email: string, pass: string): Promise<any> {
     const cleanEmail = email.toLowerCase().trim();
-    
-    // Buscamos al usuario. La tabla 'User' debe contener a todos (o estar relacionada)
+
     const user = await this.userRepository.findOne({ 
       where: { email: cleanEmail },
-      select: ['id', 'email', 'password', 'fullName', 'rol'], // 'rol' define si es admin, docente o alumno
+      select: ['id', 'email', 'password', 'fullName', 'rol'],
       relations: ['school'] 
     });
 
     if (user) {
       const isMatch = await bcrypt.compare(pass.trim(), user.password);
-      
       if (isMatch) {
-        // Retornamos todo excepto el password
         const { password, ...result } = user;
         return result;
       }
     }
-    return null; 
+    return null;
   }
 
-  // --- 2, 3 y 4. AUTENTICACIÓN Y DASHBOARD POR ROL ---
   async login(user: any) {
-      // El payload es lo que viaja encriptado en el navegador del usuario
-      const payload = { 
-        sub: user.id, 
-        rol: user.rol, // 'admin', 'docente', 'alumno'
-        schoolId: user.school?.id 
+      const payload = {
+        sub: user.id,
+        rol: user.rol,
+        schoolId: user.school?.id
       };
 
       return {
@@ -51,12 +45,11 @@ export class AuthService {
           id: user.id,
           fullName: user.fullName,
           email: user.email,
-          rol: user.rol // El frontend leerá esto para saber a qué dashboard enviar
+          rol: user.rol 
         }
       };
     }
 
-  // --- LÓGICA DE RECUPERACIÓN (Mantenida igual, es correcta) ---
   async requestPasswordReset(email: string) {
     const user = await this.userRepository.findOne({ where: { email: email.toLowerCase().trim() } });
     if (!user) throw new NotFoundException('No existe un usuario con ese correo.');
@@ -69,7 +62,7 @@ export class AuthService {
 
     return { 
       message: 'Correo de recuperación generado', 
-      link: `http://localhost:5173/recovery?token=${token}` 
+      link: `http://localhost:5173/recovery?token=${token}`
     };
   }
 

@@ -1,7 +1,7 @@
-# docker-compose.yml
 version: "3.8"
 
 services:
+  # --- SERVICIO 1: BASE DE DATOS (Ya lo tenías) ---
   db:
     image: postgres:15-alpine
     container_name: academic_db
@@ -15,6 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # --- SERVICIO 2: PGADMIN (Ya lo tenías) ---
   pgadmin:
     image: dpage/pgadmin4
     container_name: academic_pgadmin
@@ -26,5 +27,24 @@ services:
     depends_on:
       - db
 
+  # --- SERVICIO 3: SONARQUBE (NUEVO - Calidad de Código) ---
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube_server
+    ports:
+      - "9000:9000"
+    environment:
+      # Desactiva chequeos estrictos de sistema (útil para desarrollo rápido)
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      # Persistencia de datos (para no perder el historial al reiniciar)
+      - sonar_data:/opt/sonarqube/data
+      - sonar_extensions:/opt/sonarqube/extensions
+      - sonar_logs:/opt/sonarqube/logs
+
 volumes:
   postgres_data:
+  # Nuevos volúmenes para SonarQube
+  sonar_data:
+  sonar_extensions:
+  sonar_logs:
