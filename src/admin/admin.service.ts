@@ -144,7 +144,7 @@ export class AdminService {
     if (isEnrolled) return isEnrolled;
     
     return await this.enrollmentRepo.save(this.enrollmentRepo.create({ 
-        student: { id: profile!.id }, 
+        student: { id: profile.id }, 
         group: { id: targetGroupId }, 
         estado: EnrollmentStatus.ACTIVO 
     }));
