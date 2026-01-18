@@ -12,8 +12,6 @@ import { AttendanceStatus } from '../../shared/enums/attendance-status.enum';
 import { InternalMessage } from '../../communications/entities/internal-message.entity';
 import { User } from '../../users/entities/user.entity';
 
-type RendimientoMateria = { materia: string; promedio: number };
-
 export interface GradeInput {
   id: string;
   parcial1: string | number;
@@ -49,9 +47,91 @@ export class AcademicService {
     @InjectRepository(InternalMessage)
     private readonly msgRepo: Repository<InternalMessage>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
-  ) {}
+  ) { }
 
-  // SECCIÓN 1: ACADÉMICA (Grupos, Notas)
+
+  async getStudentCourses(studentId: string) {
+    // 1. Buscamos inscripciones del alumno
+    const enrollments = await this.enrollmentRepo.find({
+      where: { student: { id: studentId } },
+      relations: ['group'],
+    });
+
+    if (!enrollments.length) return [];
+
+    const groupIds = enrollments.map((e) => e.group.id);
+
+    const courses = await this.courseRepo.find({
+      where: { group: { id: In(groupIds) } },
+      relations: ['subject', 'teacher', 'teacher.user', 'schedules'],
+    });
+
+    return courses.map((c) => ({
+      id: c.id,
+      materia: c.subject?.nombre || 'Sin Nombre',
+      profesor: c.teacher?.user?.fullName || 'Por asignar',
+      horarios: c.schedules.map((s) => ({
+        dia: s.diaSemana,
+        hora: `${s.horaInicio.toString().slice(0, 5)} - ${s.horaFin.toString().slice(0, 5)}`,
+      })),
+    }));
+  }
+
+  async getStudentGradesByPeriod(studentId: string, periodoNombre: string) {
+    const grades = await this.gradeRepo.find({
+      where: {
+        enrollment: { student: { id: studentId } },
+        course: { group: { period: { nombre: periodoNombre } } },
+      },
+      relations: ['course', 'course.subject'],
+    });
+
+    return grades.map((g) => ({
+      materia: g.course?.subject?.nombre || 'Desconocida',
+      u1: g.parcial1?.toString() || '---',
+      u2: g.parcial2?.toString() || '---',
+      u3: g.parcial3?.toString() || '---',
+      u4: '---',
+      u5: '---',
+      final: g.promedioFinal?.toString() || '---',
+    }));
+  }
+
+  async getStudentAttendance(studentId: string) {
+    const asistencias = await this.attendanceRepo.find({
+      where: { enrollment: { student: { id: studentId } } },
+      order: { fecha: 'DESC' },
+    });
+
+    const faltas = asistencias.filter(
+      (a) => a.estado === AttendanceStatus.FALTA,
+    ).length;
+    const retardos = asistencias.filter(
+      (a) => a.estado === AttendanceStatus.RETARDO,
+    ).length;
+    const total = asistencias.length;
+
+    const porcentaje =
+      total > 0 ? Math.round(((total - faltas) / total) * 100) : 100;
+
+    return {
+      estadisticas: {
+        asistencia: porcentaje,
+        faltas: faltas,
+        retardos: retardos,
+      },
+      fechas: asistencias
+        .filter((a) => a.estado !== AttendanceStatus.ASISTENCIA)
+        .map((a) => ({
+          fecha: new Date(a.fecha).toISOString().split('T')[0],
+          tipo: a.estado === AttendanceStatus.FALTA ? 'Falta' : 'Retardo',
+        })),
+      recordatorios: [
+        'Recuerda justificar tus faltas en Servicios Escolares.',
+        'Mantén tu asistencia arriba del 80%.',
+      ],
+    };
+  }
 
   async getTeacherLoad(teacherId: string) {
     return this.courseRepo.find({
@@ -119,8 +199,6 @@ export class AcademicService {
     return { message: 'Calificaciones guardadas', count: gradesData.length };
   }
 
-  // SECCIÓN 2: ASISTENCIA
-
   async getStudentsForAttendance(groupId: string) {
     return this.enrollmentRepo.find({
       where: { group: { id: groupId } },
@@ -158,8 +236,6 @@ export class AcademicService {
     return { success: true, count: registros.length };
   }
 
-  // SECCIÓN 3: PERFIL
-
   async getProfile(userId: string) {
     return this.teacherRepo.findOne({
       where: { user: { id: userId } },
@@ -176,8 +252,6 @@ export class AcademicService {
       throw new NotFoundException('Perfil no encontrado');
     return { success: true };
   }
-
-  // 📨 SECCIÓN 4: MENSAJES
 
   async getInbox(userId: string) {
     return this.msgRepo.find({
@@ -223,8 +297,6 @@ export class AcademicService {
     return this.msgRepo.update(msgId, { leido: true });
   }
 
-  // SECCIÓN 5: ESTADÍSTICAS
-
   async getTeacherStats(userId: string) {
     const courses = await this.courseRepo.find({
       where: { teacher: { user: { id: userId } } },
@@ -238,7 +310,7 @@ export class AcademicService {
     let totalAlumnos = 0;
     let sumaPromedios = 0;
     let aprobados = 0;
-    const rendimientoMateria: RendimientoMateria[] = [];
+    const rendimientoMateria: { materia: string; promedio: number }[] = [];
 
     for (const course of courses) {
       const boletas = course.gradeCards ?? [];

@@ -8,6 +8,7 @@ import {
   Request,
   Patch,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   AcademicService,
@@ -17,7 +18,6 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../auth/roles.guard';
 
-// Interfaz para que TS sepa qué tiene el request
 interface RequestWithUser {
   user: {
     userId: string;
@@ -29,7 +29,24 @@ interface RequestWithUser {
 @Controller('academic')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class AcademicController {
-  constructor(private readonly academicService: AcademicService) {}
+  constructor(private readonly academicService: AcademicService) { }
+
+
+  @Get('my-courses/:studentId')
+  getMyCourses(@Param('studentId') studentId: string) {
+    return this.academicService.getStudentCourses(studentId);
+  }
+
+  @Get('my-grades/:studentId')
+  getMyGrades(@Param('studentId') studentId: string, @Query('periodo') periodo: string) {
+    return this.academicService.getStudentGradesByPeriod(studentId, periodo || '2025-1');
+  }
+
+  @Get('my-attendance/:studentId')
+  getMyAttendance(@Param('studentId') studentId: string) {
+    return this.academicService.getStudentAttendance(studentId);
+  }
+
 
   @Get('teacher-load')
   getTeacherLoad(@Request() req: RequestWithUser) {
@@ -53,7 +70,6 @@ export class AcademicController {
 
   @Post('grades/capture/:courseId')
   saveGrades(@Param('courseId') courseId: string, @Body() grades: any[]) {
-    // Convertimos 'any[]' a 'GradeInput[]' de forma segura para el servicio
     return this.academicService.saveGrades(courseId, grades as GradeInput[]);
   }
 
@@ -64,7 +80,6 @@ export class AcademicController {
 
   @Post('attendance')
   saveAttendance(@Body() body: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return this.academicService.saveAttendanceBatch(body);
   }
 
