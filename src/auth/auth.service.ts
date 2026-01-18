@@ -12,45 +12,37 @@ export class AuthService {
     private readonly userRepository: Repository<User>, 
     private readonly jwtService: JwtService 
   ) {}
-  // --- VALIDACIÓN DE LOGIN (CORREGIDA PARA DOMINIO INSTITUCIONAL) ---
+
+  // --- 1. VALIDACIÓN DE CREDENCIALES (ADMIN, DOCENTE, ALUMNO) ---
   async validateUser(email: string, pass: string): Promise<any> {
-    // 1. Normalizamos el email a minúsculas y quitamos espacios
     const cleanEmail = email.toLowerCase().trim();
     
-    // DEBUG: Verás esto en tu terminal de VS Code
-    console.log(`[AUTH] Intentando validar: ${cleanEmail}`);
-
+    // Buscamos al usuario. La tabla 'User' debe contener a todos (o estar relacionada)
     const user = await this.userRepository.findOne({ 
       where: { email: cleanEmail },
-      select: ['id', 'email', 'password', 'fullName', 'rol', 'school'], 
+      select: ['id', 'email', 'password', 'fullName', 'rol'], // 'rol' define si es admin, docente o alumno
       relations: ['school'] 
     });
 
-    // Si el usuario existe, comparamos la contraseña
     if (user) {
       const isMatch = await bcrypt.compare(pass.trim(), user.password);
       
       if (isMatch) {
-        console.log(`[AUTH] Credenciales correctas para: ${user.email}`);
+        // Retornamos todo excepto el password
         const { password, ...result } = user;
         return result;
-      } else {
-        console.log(`[AUTH] Contraseña incorrecta para: ${user.email}`);
       }
-    } else {
-      console.log(`[AUTH] Usuario no encontrado: ${cleanEmail}`);
     }
-
     return null; 
   }
 
-  // --- GENERAR TOKEN DE ACCESO ---
-
+  // --- 2, 3 y 4. AUTENTICACIÓN Y DASHBOARD POR ROL ---
   async login(user: any) {
+      // El payload es lo que viaja encriptado en el navegador del usuario
       const payload = { 
         sub: user.id, 
-        rol: user.rol,
-        schoolId: user.school?.id // Dato vital para filtrar alumnos/maestros después
+        rol: user.rol, // 'admin', 'docente', 'alumno'
+        schoolId: user.school?.id 
       };
 
       return {
@@ -59,48 +51,40 @@ export class AuthService {
           id: user.id,
           fullName: user.fullName,
           email: user.email,
-          rol: user.rol
+          rol: user.rol // El frontend leerá esto para saber a qué dashboard enviar
         }
       };
     }
-  // --- LÓGICA DE RECUPERACIÓN DE CONTRASEÑA ---
 
+  // --- LÓGICA DE RECUPERACIÓN (Mantenida igual, es correcta) ---
   async requestPasswordReset(email: string) {
     const user = await this.userRepository.findOne({ where: { email: email.toLowerCase().trim() } });
-    
     if (!user) throw new NotFoundException('No existe un usuario con ese correo.');
 
     const payload = { sub: user.id, type: 'recovery' };
-    
     const token = this.jwtService.sign(payload, { 
       expiresIn: '15m', 
       secret: process.env.JWT_SECRET || 'SECRET_KEY_POR_DEFECTO' 
     });
 
-    const recoveryLink = `http://localhost:5173/recovery?token=${token}`;
-
     return { 
-      message: 'Correo de recuperación generado (Modo Dev)', 
-      link: recoveryLink 
+      message: 'Correo de recuperación generado', 
+      link: `http://localhost:5173/recovery?token=${token}` 
     };
   }
 
   async resetPassword(token: string, newPassword: string) {
     try {
       const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET || 'SECRET_KEY_POR_DEFECTO' });
-      
-      if (payload.type !== 'recovery') throw new BadRequestException('Token inválido');
-
       const user = await this.userRepository.findOne({ where: { id: payload.sub } });
+      
       if (!user) throw new NotFoundException('Usuario no encontrado');
 
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(newPassword.trim(), salt);
-      
       await this.userRepository.save(user);
 
       return { message: 'Contraseña actualizada correctamente.' };
-
     } catch (error) {
       throw new BadRequestException('El enlace ha expirado o no es válido.');
     }

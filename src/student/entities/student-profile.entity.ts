@@ -16,7 +16,7 @@ export class StudentProfile {
   @Column({ name: 'nombre_completo', length: 150, nullable: true })
   nombreCompleto: string;
 
-  @Column({ length: 18, unique: true, nullable: true })
+  @Column({ nullable: true }) // Esto permitiría que esté vacía
   curp: string;
 
   @Column({ name: 'fecha_nacimiento', type: 'date' })

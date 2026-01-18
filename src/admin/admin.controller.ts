@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Delete, UseGuards, Request, Res } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
@@ -6,7 +6,6 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../shared/enums/user-role.enum';
 import { CreateGroupDto } from './dtos/create-group.dto';
 import { AddStudentDto } from './dtos/add-student-to-group.dto';
-import { CreateDocenteDto } from './dtos/create-docente.dto';
 
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -14,52 +13,52 @@ import { CreateDocenteDto } from './dtos/create-docente.dto';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Get('dashboard')
-  getDash(@Request() req) { return this.adminService.getDashboardData(req.user.schoolId, req.user.userId); }
+  // --- SECCIÓN DE GRUPOS ---
 
   @Get('grupos')
-  getGrupos(@Request() req) { return this.adminService.getGroups(req.user.schoolId); }
-
-  @Post('grupos')
-  saveGrp(@Body() dto: CreateGroupDto, @Request() req) { return this.adminService.saveGroup(dto, req.user.schoolId); }
-
-  @Get('grupos/:id/alumnos')
-  getAlums(@Param('id') id: string) { return this.adminService.getStudentsByGroup(id); }
-
-  @Post('alumnos/registrar')
-  regAlum(@Body() dto: AddStudentDto, @Request() req) { return this.adminService.addStudentToGroup(dto, req.user.schoolId); }
-
-  @Get('alumnos/:id/historial-detallado')
-  getHistorial(@Param('id') id: string) { return this.adminService.getStudentAcademicHistory(id); }
-
-  @Get('alumnos/:id/descargar-historial-completo')
-  async descargarHistorial(@Param('id') id: string, @Res() res: any) {
-    const csv = await this.adminService.exportStudentAcademicHistory(id);
-    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="Historial_${id}.csv"` });
-    res.send('\ufeff' + csv);
+  getGroups(@Request() req) {
+    return this.adminService.getGroups(req.user.schoolId);
   }
 
-  @Get('docentes')
-  getDocs(@Request() req) { return this.adminService.getDocentes(req.user.schoolId); }
+  @Post('grupos')
+  saveGrp(@Body() dto: CreateGroupDto, @Request() req) { 
+    return this.adminService.saveGroup(dto, req.user.schoolId); 
+  }
 
-  @Post('docentes')
-  regDoc(@Body() dto: CreateDocenteDto, @Request() req) { return this.adminService.createDocente(dto, req.user.schoolId); }
+  @Patch('grupos/:id') 
+  updateGroup(@Param('id') id: string, @Body() dto: any) {
+    return this.adminService.updateGroup(id, dto);
+  }
 
-  @Get('docentes/:id/perfil')
-  getDocProfile(@Param('id') id: string) { return this.adminService.getDocenteProfileById(id); }
+  @Delete('grupos/:id')
+  deleteGroup(@Param('id') id: string) {
+    return this.adminService.deleteGroup(id);
+  }
 
-  @Patch('docentes/:id/perfil')
-  updDocProfile(@Param('id') id: string, @Body() body: any) { return this.adminService.updateDocenteProfile(id, body); }
+  // --- SECCIÓN DE ALUMNOS ---
 
-  @Delete('docentes/:id')
-  delDoc(@Param('id') id: string) { return this.adminService.deleteDocente(id); }
+  @Get('grupos/:id/alumnos')
+  getAlums(@Param('id') id: string) { 
+    return this.adminService.getStudentsByGroup(id); 
+  }
 
-  @Post('ciclos')
-  saveCiclo(@Body() body: any, @Request() req) { return this.adminService.createPeriod(body, req.user.schoolId); }
+  @Post('alumnos')
+  regAlum(@Body() dto: AddStudentDto, @Request() req) { 
+    return this.adminService.addStudentToGroup(dto, req.user.schoolId); 
+  }
 
-  // RUTA PARA ACTIVAR CICLO
-  @Patch('ciclos/:id/activar')
-  activarCiclo(@Param('id') id: string, @Request() req) { 
-    return this.adminService.setActualPeriod(id, req.user.schoolId); 
+  @Delete('alumnos/:id')
+  deleteAlum(@Param('id') id: string) {
+    return this.adminService.deleteStudent(id);
+  }
+
+  @Get('alumnos/:id/historial')
+  getHist(@Param('id') id: string) { 
+    return this.adminService.getStudentAcademicHistory(id); 
+  }
+
+  @Get('alumnos/:id/perfil-completo')
+  getPerf(@Param('id') id: string) { 
+    return this.adminService.getAlumnoFullProfile(id); 
   }
 }

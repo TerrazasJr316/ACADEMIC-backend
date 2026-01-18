@@ -7,9 +7,9 @@ export class AddStudentDto {
 
   @IsNotEmpty()
   @IsString()
-  nombreCompleto: string; // Se recibe, aunque en tu BD usemos el email para identificarlo
+  nombre: string; // Sincronizado con tu adminService.registrarAlumno
 
   @IsNotEmpty()
   @IsString()
-  grupoId: string; // El UUID del grupo real
+  grupoId: string;
 }
