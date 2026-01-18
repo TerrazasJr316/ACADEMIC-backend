@@ -26,7 +26,7 @@ import { CommunicationsModule } from './communications/communications.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT ?? '5432', 10),
+      port: Number.parseInt(process.env.DB_PORT ?? '5432', 10),
       username: process.env.DB_USER || 'admin',
       password: process.env.DB_PASSWORD || 'root',
       database: process.env.DB_NAME || 'academic_saas',
