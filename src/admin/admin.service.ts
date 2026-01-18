@@ -18,12 +18,12 @@ import { CreateGroupDto } from './dtos/create-group.dto';
 @Injectable()
 export class AdminService {
   constructor(
-    @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Group) private groupRepo: Repository<Group>,
     @InjectRepository(Enrollment) private enrollmentRepo: Repository<Enrollment>,
-    @InjectRepository(StudentProfile) private profileRepo: Repository<StudentProfile>,
+    @InjectRepository(StudentProfile) private readonly profileRepo: Repository<StudentProfile>,
     @InjectRepository(AcademicPeriod) private periodRepo: Repository<AcademicPeriod>,
-    @InjectRepository(School) private schoolRepo: Repository<School>, 
+    @InjectRepository(School) private readonly schoolRepo: Repository<School>,
   ) {}
 
   // 1. OBTENER GRUPOS CON CONTEO DE ALUMNOS
@@ -138,7 +138,7 @@ export class AdminService {
     }
 
     const isEnrolled = await this.enrollmentRepo.findOne({ 
-      where: { student: { id: profile!.id }, group: { id: targetGroupId } } 
+      where: { student: { id: profile.id }, group: { id: targetGroupId } } 
     });
 
     if (isEnrolled) return isEnrolled;
