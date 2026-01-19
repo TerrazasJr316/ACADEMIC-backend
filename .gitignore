@@ -75,3 +75,7 @@ Desktop.ini
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+*.json
+sonar-project.properties
+auth.service.int-spec.ts
