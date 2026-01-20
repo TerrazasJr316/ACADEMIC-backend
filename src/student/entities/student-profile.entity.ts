@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Enrollment } from '../../academic/entities/enrollment.entity';
 
 @Entity('perfiles_alumno')
 export class StudentProfile {
@@ -10,30 +11,37 @@ export class StudentProfile {
   @JoinColumn({ name: 'id_usuario' })
   user: User;
 
-  @Column({ name: 'matricula', unique: true })
+  @Column({ unique: true })
   matricula: string;
 
   @Column({ name: 'nombre_completo', length: 150, nullable: true })
   nombreCompleto: string;
 
-  @Column({ length: 18, unique: true, nullable: true })
+  @Column({ nullable: true })
   curp: string;
 
-  @Column({ name: 'fecha_nacimiento', type: 'date' })
+  @Column({ name: 'fecha_nacimiento', type: 'date', nullable: true })
   fechaNacimiento: Date;
 
-  @Column({ length: 20 })
+  @Column({ length: 20, nullable: true })
   genero: string;
 
-  @Column()
+  @Column({ nullable: true })
   telefono: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   direccion: string;
 
-  @Column({ name: 'tipo_sangre', length: 5, nullable: true })
-  tipoSangre: string;
+  // ✅ CAMPOS PARA EL TUTOR (Capturados en el modal)
+  @Column({ name: 'nombre_tutor', length: 150, nullable: true })
+  tutor: string;
 
-  @Column({ name: 'grado_actual' })
+  @Column({ name: 'telefono_tutor', length: 20, nullable: true })
+  telefonoTutor: string;
+
+  @Column({ name: 'grado_actual', nullable: true })
   gradoActual: string;
+
+  @OneToMany(() => Enrollment, (enrollment) => enrollment.student)
+  enrollments: Enrollment[];
 }

@@ -2,23 +2,22 @@ import { IsString, IsNotEmpty, IsNumber, IsOptional, Min, Max } from 'class-vali
 
 export class CreateGroupDto {
   @IsOptional()
-  id?: string; // Si viene ID, es edición
+  @IsString()
+  id?: string;
 
   @IsNotEmpty()
   @IsString()
-  nombre: string; // Ej: "3A" (Grado + Letra combinados o separados, tu front manda "3A")
+  nombre: string; 
 
-  @IsNotEmpty()
+  @IsOptional() // 👈 Cambiado a opcional para que no de error 400 si el front no lo manda
   @IsNumber()
-  @Min(1)
-  @Max(60)
-  limiteAlumnos: number; // Tu front lo llama "alumnos" (capacidad) pero la BD es "limite_alumnos"
+  limiteAlumnos?: number; 
 
   @IsOptional()
   @IsNumber()
-  semestre?: number; // Tu front manda "grado" (1, 2, 3...)
+  semestre?: number; 
 
   @IsOptional()
   @IsString()
-  turno?: string; // Matutino/Vespertino
+  turno?: string;
 }

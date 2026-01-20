@@ -12,97 +12,79 @@ export class AuthService {
     private readonly userRepository: Repository<User>, 
     private readonly jwtService: JwtService 
   ) {}
-  // --- VALIDACIÓN DE LOGIN (CORREGIDA PARA DOMINIO INSTITUCIONAL) ---
+
+  // --- VALIDACIÓN ---
   async validateUser(email: string, pass: string): Promise<any> {
-    // 1. Normalizamos el email a minúsculas y quitamos espacios
     const cleanEmail = email.toLowerCase().trim();
     
-    // DEBUG: Verás esto en tu terminal de VS Code
-    console.log(`[AUTH] Intentando validar: ${cleanEmail}`);
-
     const user = await this.userRepository.findOne({ 
       where: { email: cleanEmail },
-      select: ['id', 'email', 'password', 'fullName', 'rol', 'school'], 
+      select: ['id', 'email', 'password', 'fullName', 'rol'], 
       relations: ['school'] 
     });
 
-    // Si el usuario existe, comparamos la contraseña
-    if (user) {
-      const isMatch = await bcrypt.compare(pass.trim(), user.password);
-      
-      if (isMatch) {
-        console.log(`[AUTH] Credenciales correctas para: ${user.email}`);
-        const { password, ...result } = user;
-        return result;
-      } else {
-        console.log(`[AUTH] Contraseña incorrecta para: ${user.email}`);
-      }
-    } else {
-      console.log(`[AUTH] Usuario no encontrado: ${cleanEmail}`);
+    if (user && await bcrypt.compare(pass.trim(), user.password)) {
+      const { password, ...result } = user;
+      return result;
     }
-
     return null; 
   }
 
-  // --- GENERAR TOKEN DE ACCESO ---
-
+  // --- LOGIN ---
   async login(user: any) {
       const payload = { 
         sub: user.id, 
-        rol: user.rol,
-        schoolId: user.school?.id // Dato vital para filtrar alumnos/maestros después
+        email: user.email, 
+        rol: user.rol, 
+        schoolId: user.school?.id 
       };
 
+      // ✅ FIRMAMOS CON LA MISMA CLAVE FIJA
+      // Usamos el jwtService configurado en el Módulo (que ya tiene la clave 'CLAVE_SECRETA_MAESTRA_12345')
       return {
-        access_token: this.jwtService.sign(payload),
+        access_token: this.jwtService.sign(payload), 
         user: {
           id: user.id,
           fullName: user.fullName,
           email: user.email,
-          rol: user.rol
+          rol: user.rol 
         }
       };
     }
-  // --- LÓGICA DE RECUPERACIÓN DE CONTRASEÑA ---
 
+  // --- RECOVERY ---
   async requestPasswordReset(email: string) {
     const user = await this.userRepository.findOne({ where: { email: email.toLowerCase().trim() } });
-    
-    if (!user) throw new NotFoundException('No existe un usuario con ese correo.');
+    if (!user) throw new NotFoundException('Usuario no encontrado.');
 
     const payload = { sub: user.id, type: 'recovery' };
     
+    // Aquí sí especificamos secret porque es un token especial de corta duración
     const token = this.jwtService.sign(payload, { 
       expiresIn: '15m', 
-      secret: process.env.JWT_SECRET || 'SECRET_KEY_POR_DEFECTO' 
+      secret: 'CLAVE_SECRETA_MAESTRA_12345' 
     });
 
-    const recoveryLink = `http://localhost:5173/recovery?token=${token}`;
-
     return { 
-      message: 'Correo de recuperación generado (Modo Dev)', 
-      link: recoveryLink 
+      message: 'Correo de recuperación generado', 
+      link: `http://localhost:5173/recovery?token=${token}` 
     };
   }
 
   async resetPassword(token: string, newPassword: string) {
     try {
-      const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET || 'SECRET_KEY_POR_DEFECTO' });
-      
-      if (payload.type !== 'recovery') throw new BadRequestException('Token inválido');
-
+      const payload = this.jwtService.verify(token, { secret: 'CLAVE_SECRETA_MAESTRA_12345' });
       const user = await this.userRepository.findOne({ where: { id: payload.sub } });
+      
       if (!user) throw new NotFoundException('Usuario no encontrado');
 
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(newPassword.trim(), salt);
-      
       await this.userRepository.save(user);
 
       return { message: 'Contraseña actualizada correctamente.' };
-
     } catch (error) {
-      throw new BadRequestException('El enlace ha expirado o no es válido.');
+      throw new BadRequestException('Token inválido o expirado.');
     }
   }
 }

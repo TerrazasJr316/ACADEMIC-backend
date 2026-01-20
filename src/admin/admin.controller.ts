@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Delete, UseGuards, Request, Res } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
@@ -10,56 +10,125 @@ import { CreateDocenteDto } from './dtos/create-docente.dto';
 
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles(UserRole.ADMIN) 
+@Roles(UserRole.ADMIN)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Get('dashboard')
-  getDash(@Request() req) { return this.adminService.getDashboardData(req.user.schoolId, req.user.userId); }
-
-  @Get('grupos')
-  getGrupos(@Request() req) { return this.adminService.getGroups(req.user.schoolId); }
-
-  @Post('grupos')
-  saveGrp(@Body() dto: CreateGroupDto, @Request() req) { return this.adminService.saveGroup(dto, req.user.schoolId); }
-
-  @Get('grupos/:id/alumnos')
-  getAlums(@Param('id') id: string) { return this.adminService.getStudentsByGroup(id); }
-
-  @Post('alumnos/registrar')
-  regAlum(@Body() dto: AddStudentDto, @Request() req) { return this.adminService.addStudentToGroup(dto, req.user.schoolId); }
-
-  @Get('alumnos/:id/historial-detallado')
-  getHistorial(@Param('id') id: string) { return this.adminService.getStudentAcademicHistory(id); }
-
-  @Get('alumnos/:id/descargar-historial-completo')
-  async descargarHistorial(@Param('id') id: string, @Res() res: any) {
-    const csv = await this.adminService.exportStudentAcademicHistory(id);
-    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="Historial_${id}.csv"` });
-    res.send('\ufeff' + csv);
+  // ==========================================
+  // ===          GESTIÓN DOCENTES          ===
+  // ==========================================
+  @Get('docentes')
+  async getTeachers(@Request() req) {
+    return await this.adminService.getTeachers(req.user.schoolId);
   }
 
-  @Get('docentes')
-  getDocs(@Request() req) { return this.adminService.getDocentes(req.user.schoolId); }
-
-  @Post('docentes')
-  regDoc(@Body() dto: CreateDocenteDto, @Request() req) { return this.adminService.createDocente(dto, req.user.schoolId); }
+  @Post('docentes/registrar')
+  async registerTeacher(@Body() dto: CreateDocenteDto, @Request() req) {
+    return await this.adminService.createTeacher(dto, req.user.schoolId);
+  }
 
   @Get('docentes/:id/perfil')
-  getDocProfile(@Param('id') id: string) { return this.adminService.getDocenteProfileById(id); }
+  async getTeacherProfile(@Param('id') id: string) {
+    return await this.adminService.getTeacherProfile(id);
+  }
 
   @Patch('docentes/:id/perfil')
-  updDocProfile(@Param('id') id: string, @Body() body: any) { return this.adminService.updateDocenteProfile(id, body); }
+  async updateTeacherProfile(@Param('id') id: string, @Body() dto: any) {
+    return await this.adminService.updateTeacherProfile(id, dto);
+  }
 
   @Delete('docentes/:id')
-  delDoc(@Param('id') id: string) { return this.adminService.deleteDocente(id); }
+  async deleteTeacher(@Param('id') id: string) {
+    return await this.adminService.deleteTeacher(id);
+  }
 
-  @Post('ciclos')
-  saveCiclo(@Body() body: any, @Request() req) { return this.adminService.createPeriod(body, req.user.schoolId); }
+  // ==========================================
+  // ===          GESTIÓN ALUMNOS           ===
+  // ==========================================
+  @Post('alumnos')
+  async regAlum(@Body() dto: AddStudentDto, @Request() req) { 
+    return await this.adminService.addStudentToGroup(dto, req.user.schoolId); 
+  }
 
-  // RUTA PARA ACTIVAR CICLO
-  @Patch('ciclos/:id/activar')
-  activarCiclo(@Param('id') id: string, @Request() req) { 
-    return this.adminService.setActualPeriod(id, req.user.schoolId); 
+  @Get('alumnos/:id/perfil-completo')
+  async getPerf(@Param('id') id: string) { 
+    return await this.adminService.getAlumnoFullProfile(id); 
+  }
+  
+  @Patch('alumnos/:id')
+  async updateAlum(@Param('id') id: string, @Body() dto: any) { 
+    return await this.adminService.updateStudentProfile(id, dto); 
+  }
+
+  @Delete('alumnos/:id')
+  async deleteAlum(@Param('id') id: string) { 
+    return await this.adminService.deleteStudent(id); 
+  }
+
+  // ==========================================
+  // ===           GESTIÓN GRUPOS           ===
+  // ==========================================
+  @Get('grupos')
+  async getGroups(@Request() req) { 
+    return await this.adminService.getGroups(req.user.schoolId); 
+  }
+  
+  @Post('grupos')
+  async saveGrp(@Body() dto: CreateGroupDto, @Request() req) { 
+    return await this.adminService.saveGroup(dto, req.user.schoolId); 
+  }
+
+  @Patch('grupos/:id')
+  async updateGrp(@Param('id') id: string, @Body() dto: any) { 
+    return await this.adminService.updateGroup(id, dto); 
+  }
+  
+  // ✅ ESTA ES LA RUTA QUE FALTABA Y CAUSABA EL 404
+  @Get('grupos/:id/alumnos')
+  async getAlums(@Param('id') id: string) { 
+    return await this.adminService.getStudentsByGroup(id); 
+  }
+
+  @Delete('grupos/:id')
+  async deleteGroup(@Param('id') id: string) { 
+    return await this.adminService.deleteGroup(id); 
+  }
+
+  // ==========================================
+  // ===      GESTIÓN ACADÉMICA (NUEVO)     ===
+  // ==========================================
+
+  @Get('materias')
+  async getSubjects(@Request() req) {
+    return await this.adminService.getSubjects(req.user.schoolId);
+  }
+
+  @Post('materias')
+  async createSubject(@Body() dto: any, @Request() req) {
+    return await this.adminService.createSubject(dto, req.user.schoolId);
+  }
+
+  @Delete('materias/:id')
+  async deleteSubject(@Param('id') id: string) {
+    return await this.adminService.deleteSubject(id);
+  }
+
+  @Get('usuarios/buscar')
+  async searchUsers(@Query('q') query: string, @Request() req) {
+    return await this.adminService.searchAllUsers(query, req.user.schoolId);
+  }
+
+  // ==========================================
+  // ===             MENSAJERÍA             ===
+  // ==========================================
+  
+  @Post('mensajes/enviar')
+  async sendMessage(@Body() body: any, @Request() req) {
+    return await this.adminService.broadcastMessage(req.user.id, body);
+  }
+
+  @Get('mensajes/historial')
+  async getHistory(@Request() req) {
+    return await this.adminService.getMensajesEnviados(req.user.id);
   }
 }
