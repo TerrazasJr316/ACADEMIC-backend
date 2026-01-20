@@ -133,4 +133,9 @@ export class AcademicController {
   getDashboardSummary(@Param('studentId') studentId: string) {
     return this.academicService.getStudentDashboardSummary(studentId);
   }
+
+  @Get('student-profile/:userId')
+  getStudentProfileData(@Param('userId') userId: string) {
+    return this.academicService.getStudentProfile(userId);
+  }
 }
