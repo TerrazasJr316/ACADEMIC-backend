@@ -15,7 +15,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-<<<<<<< HEAD
   const config = new DocumentBuilder()
     .setTitle('API Sistema Escolar SaaS')
     .setDescription('Documentación de la API para gestión de escuelas, alumnos y maestros')
@@ -26,8 +25,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-=======
->>>>>>> 56770a7f9bfbcefffe294f89f60d85ffd9b9843d
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
   console.log(`🚀 Servidor corriendo en: http://localhost:3000`);
 }

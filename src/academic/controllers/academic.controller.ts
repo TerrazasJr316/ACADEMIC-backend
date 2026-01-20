@@ -18,14 +18,14 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../auth/roles.guard';
 
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiBearerAuth, 
-  ApiParam, 
-  ApiQuery, 
-  ApiBody, 
-  ApiResponse 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+  ApiBody,
+  ApiResponse
 } from '@nestjs/swagger';
 
 interface RequestWithUser {
@@ -58,15 +58,13 @@ export class AcademicController {
     return this.academicService.getStudentGradesByPeriod(studentId, periodo || '2025-1');
   }
 
-<<<<<<< HEAD
   @ApiOperation({ summary: 'Consultar historial de asistencias' })
-=======
+
   @Get('my-academic-history/:studentId')
   getAcademicHistory(@Param('studentId') studentId: string) {
     return this.academicService.getAcademicHistory(studentId);
   }
 
->>>>>>> 56770a7f9bfbcefffe294f89f60d85ffd9b9843d
   @Get('my-attendance/:studentId')
   getMyAttendance(@Param('studentId') studentId: string) {
     return this.academicService.getStudentAttendance(studentId);
@@ -158,15 +156,15 @@ export class AcademicController {
   }
 
   @ApiOperation({ summary: 'Enviar mensaje nuevo' })
-  @ApiBody({ 
-    schema: { 
-      type: 'object', 
-      properties: { 
-        to: { type: 'string', description: 'ID del destinatario' }, 
-        subject: { type: 'string' }, 
-        message: { type: 'string' } 
-      } 
-    } 
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        to: { type: 'string', description: 'ID del destinatario' },
+        subject: { type: 'string' },
+        message: { type: 'string' }
+      }
+    }
   })
   @Post('messages/send')
   sendMessage(
