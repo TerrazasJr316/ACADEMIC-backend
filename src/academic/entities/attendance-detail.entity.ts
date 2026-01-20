@@ -8,12 +8,10 @@ export class AttendanceDetail {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // Quién faltó/asistió
   @ManyToOne(() => Enrollment)
   @JoinColumn({ name: 'id_inscripcion' })
   enrollment: Enrollment;
 
-  // En qué clase
   @ManyToOne(() => Course)
   @JoinColumn({ name: 'id_curso' })
   course: Course;

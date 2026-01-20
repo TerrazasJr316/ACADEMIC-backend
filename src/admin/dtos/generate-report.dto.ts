@@ -3,17 +3,17 @@ import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
 export class GenerateReportDto {
   @IsNotEmpty()
   @IsString()
-  periodo: string; // ID del Periodo (Ciclo Escolar)
+  periodo: string; 
 
   @IsNotEmpty()
   @IsString()
-  asignatura: string; // ID de la Materia (Subject)
+  asignatura: string; 
 
   @IsNotEmpty()
   @IsString()
-  grupo: string; // ID del Grupo
+  grupo: string; 
 
   @IsOptional()
   @IsString()
-  matricula?: string; // Opcional: Matrícula del alumno
+  matricula?: string; 
 }

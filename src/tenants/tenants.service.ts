@@ -1,4 +1,3 @@
-// 🔥 SOLUCIÓN 4: Agregamos 'NotFoundException' a los imports
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm'; 
 import { RegisterTenantDto } from './dtos/register-tenant.dto';
@@ -22,7 +21,6 @@ export class TenantsService {
     await queryRunner.startTransaction();
 
     try {
-      // 1. PREPARAMOS LA ESCUELA 
       const newSchool = new School();
       newSchool.nombreEscuela = data.nombreEscuela;
       newSchool.dominioEscuela = data.dominioEscuela;
@@ -33,14 +31,12 @@ export class TenantsService {
       let stripeCustomerId: string | null = null;
       let stripeSubscriptionId: string | null = null;
 
-      // 2. LÓGICA DE STRIPE (PRO)
       if (data.plan === 'PRO') {
         
         if (!data.tokenPago || !data.tarjetaUltimos4 || !data.nombreTitular) {
           throw new BadRequestException('El Plan PRO requiere datos de pago completos.');
         }
 
-        // Crear Cliente
         const customer = await this.stripeService.createCustomer(
           data.emailAdmin,
           data.nombreEscuela,
@@ -48,7 +44,6 @@ export class TenantsService {
         );
         stripeCustomerId = customer.id;
 
-        // Validar precio y Crear Suscripción
         const priceId = process.env.STRIPE_PRICE_ID_PRO;
         if (!priceId) throw new BadRequestException('Configuración interna: Falta STRIPE_PRICE_ID_PRO');
 
@@ -62,10 +57,8 @@ export class TenantsService {
         newSchool.stripeSubscriptionId = stripeSubscriptionId;
       } 
 
-      // 3. GUARDAR LA ESCUELA
       const savedSchool = await queryRunner.manager.save(newSchool);
 
-      // 4. GUARDAR BILLING INFO
       if (data.plan === 'PRO') {
          const billing = new BillingInfo();
          billing.nombreTitular = data.nombreTitular || '';
@@ -78,7 +71,6 @@ export class TenantsService {
          await queryRunner.manager.save(billing);
       }
 
-      // 5. CREAR EL USUARIO ADMIN
       const newUser = new User();
       newUser.fullName = data.nombreAdmin || 'Administrador'; 
       newUser.email = data.emailAdmin;
@@ -111,7 +103,6 @@ export class TenantsService {
     }
   }
 
-  // MÉTODO PARA CANCELACIÓN
   async cancelTenantSubscription(schoolId: string) {
     const school = await this.dataSource.getRepository(School).findOne({ where: { id: schoolId } });
     
@@ -124,7 +115,6 @@ export class TenantsService {
     try {
       await this.stripeService.cancelSubscription(school.stripeSubscriptionId);
 
-      // Desactivamos la escuela localmente
       school.isActive = false; 
       await this.dataSource.getRepository(School).save(school);
 

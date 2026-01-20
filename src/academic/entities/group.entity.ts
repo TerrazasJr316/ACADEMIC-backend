@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { AcademicPeriod } from './academic-period.entity';
-// Importaremos Inscripcion y Curso más abajo (relaciones circulares)
 
 @Entity('grupos')
 export class Group {
@@ -12,7 +11,7 @@ export class Group {
   period: AcademicPeriod;
 
   @Column()
-  nombre: string; // Ej: "301-A"
+  nombre: string; 
 
   @Column({ type: 'int' })
   semestre: number;

@@ -32,7 +32,6 @@ export class TeacherProfile {
   @Column({ type: 'text', nullable: true })
   habilidades: string;
 
-  // ✅ NUEVAS COLUMNAS PARA PERSISTENCIA DE MATERIAS Y HORARIOS
   @Column({ type: 'json', nullable: true })
   materiasAsignadas: any;
 

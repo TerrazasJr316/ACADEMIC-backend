@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { TransactionCatalog } from './entities/transaction-catalog.entity';
 import { StudentPayment } from './entities/student-payment.entity';
 import { School } from '../tenants/entities/school.entity';
-// 👇 Usamos TU enum correcto
 import { PaymentStatus } from '../shared/enums/payment-status.enum';
 
 @Injectable()

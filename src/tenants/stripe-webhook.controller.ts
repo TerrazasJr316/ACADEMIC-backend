@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { School } from './entities/school.entity';
 import type { Request } from 'express';
-// Importamos RawBodyRequest solo como 'type' para que no rompa la compilación
 import type { RawBodyRequest } from '@nestjs/common';
 
 interface RequestWithRawBody extends Request {
@@ -48,12 +47,12 @@ export class StripeWebhookController {
         endpointSecret
       );
     } catch (err) {
-      console.error(`⚠️ Webhook Error: ${err.message}`);
+      console.error(` Webhook Error: ${err.message}`);
       throw new BadRequestException(`Webhook Error: ${err.message}`);
     }
 
     // Si pasamos aquí, el evento es 100% real y viene de Stripe
-    console.log('🔔 Evento VERIFICADO de Stripe:', event.type);
+    console.log(' Evento VERIFICADO de Stripe:', event.type);
 
     try {
       switch (event.type) {
@@ -62,7 +61,7 @@ export class StripeWebhookController {
           // Validamos que exista subscription antes de llamar a la función
           if (invoice.subscription) {
               await this.updateSchoolStatus(invoice.subscription as string, true);
-              console.log(`✅ Pago exitoso. Escuela Activa.`);
+              console.log(` Pago exitoso. Escuela Activa.`);
           }
           break;
 
@@ -70,14 +69,14 @@ export class StripeWebhookController {
           const invoiceFailed = event.data.object;
           if (invoiceFailed.subscription) {
               await this.updateSchoolStatus(invoiceFailed.subscription as string, false);
-              console.log(`❌ Pago falló. Escuela DESACTIVADA.`);
+              console.log(` Pago falló. Escuela DESACTIVADA.`);
           }
           break;
 
         case 'customer.subscription.deleted':
           const sub = event.data.object;
           await this.updateSchoolStatus(sub.id, false);
-          console.log(`🗑️ Suscripción cancelada. Escuela DESACTIVADA.`);
+          console.log(` Suscripción cancelada. Escuela DESACTIVADA.`);
           break;
       }
     } catch (error) {
@@ -95,7 +94,7 @@ export class StripeWebhookController {
       school.isActive = isActive;
       await this.schoolRepo.save(school);
     } else {
-      console.log('⚠️ Webhook: No se encontró escuela vinculada a esta suscripción.');
+      console.log(' Webhook: No se encontró escuela vinculada a esta suscripción.');
     }
   }
 }

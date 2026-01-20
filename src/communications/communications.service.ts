@@ -11,18 +11,15 @@ export class CommunicationsService {
     ) { }
 
     async getStudentNotifications(userId: string) {
-        // Buscamos las notificaciones del usuario, ordenadas por la más reciente
         const notifications = await this.notificationRepository.find({
             where: { user: { id: userId } },
             order: { fechaCreacion: 'DESC' },
         });
 
-        // Mapeamos los datos para que el Front (alumno.service.ts) los reciba como espera
         return notifications.map(notif => ({
             id: notif.id,
             mensaje: notif.mensaje,
             leida: notif.leida,
-            // Formateamos la fecha para que coincida con el formato del mock (DD/MM/YY)
             fecha: notif.fechaCreacion.toLocaleDateString('es-MX', {
                 day: '2-digit',
                 month: '2-digit',

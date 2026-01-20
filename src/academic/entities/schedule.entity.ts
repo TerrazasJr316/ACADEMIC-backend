@@ -7,7 +7,6 @@ export class Schedule {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // RELACIÓN: Un horario pertenece a un Curso específico
   @ManyToOne(() => Course, (course) => course.schedules)
   @JoinColumn({ name: 'id_curso' })
   course: Course;
@@ -18,7 +17,6 @@ export class Schedule {
   })
   diaSemana: WeekDay;
 
-  // En Postgres, el tipo 'time' guarda horas sin fecha (ej: "14:00:00")
   @Column({ name: 'hora_inicio', type: 'time' })
   horaInicio: string;
 
@@ -26,5 +24,5 @@ export class Schedule {
   horaFin: string;
 
   @Column({ name: 'aula_especifica', nullable: true })
-  aulaEspecifica: string; // Ej: "Laboratorio 2" (Sobreescribe el default del curso)
+  aulaEspecifica: string; 
 }

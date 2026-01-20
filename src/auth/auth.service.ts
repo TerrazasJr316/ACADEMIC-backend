@@ -13,7 +13,6 @@ export class AuthService {
     private readonly jwtService: JwtService 
   ) {}
 
-  // --- VALIDACIÓN ---
   async validateUser(email: string, pass: string): Promise<any> {
     const cleanEmail = email.toLowerCase().trim();
     
@@ -30,7 +29,6 @@ export class AuthService {
     return null; 
   }
 
-  // --- LOGIN ---
   async login(user: any) {
       const payload = { 
         sub: user.id, 
@@ -39,8 +37,6 @@ export class AuthService {
         schoolId: user.school?.id 
       };
 
-      // ✅ FIRMAMOS CON LA MISMA CLAVE FIJA
-      // Usamos el jwtService configurado en el Módulo (que ya tiene la clave 'CLAVE_SECRETA_MAESTRA_12345')
       return {
         access_token: this.jwtService.sign(payload), 
         user: {
@@ -52,14 +48,12 @@ export class AuthService {
       };
     }
 
-  // --- RECOVERY ---
   async requestPasswordReset(email: string) {
     const user = await this.userRepository.findOne({ where: { email: email.toLowerCase().trim() } });
     if (!user) throw new NotFoundException('Usuario no encontrado.');
 
     const payload = { sub: user.id, type: 'recovery' };
     
-    // Aquí sí especificamos secret porque es un token especial de corta duración
     const token = this.jwtService.sign(payload, { 
       expiresIn: '15m', 
       secret: 'CLAVE_SECRETA_MAESTRA_12345' 

@@ -6,9 +6,8 @@ export class BillingInfo {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // RELACIÓN: Pertenece a UNA escuela
   @OneToOne(() => School)
-  @JoinColumn({ name: 'id_escuela' }) // Esta es la Foreign Key física
+  @JoinColumn({ name: 'id_escuela' }) 
   school: School;
 
   @Column({ name: 'nombre_titular' })
@@ -17,7 +16,7 @@ export class BillingInfo {
   @Column({ name: 'ultimos_digitos_tarjeta', length: 4 })
   ultimosDigitosTarjeta: string;
 
-  @Column({ name: 'token_pago' }) // Token de Stripe/Openpay (Nunca guardes la tarjeta real)
+  @Column({ name: 'token_pago' }) 
   tokenPago: string;
 
   @Column({ name: 'fecha_vencimiento', type: 'date' })

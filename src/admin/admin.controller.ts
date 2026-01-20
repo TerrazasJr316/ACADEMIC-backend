@@ -13,10 +13,6 @@ import { CreateDocenteDto } from './dtos/create-docente.dto';
 @Roles(UserRole.ADMIN)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
-
-  // ==========================================
-  // ===          GESTIÓN DOCENTES          ===
-  // ==========================================
   @Get('docentes')
   async getTeachers(@Request() req) {
     return await this.adminService.getTeachers(req.user.schoolId);
@@ -42,9 +38,6 @@ export class AdminController {
     return await this.adminService.deleteTeacher(id);
   }
 
-  // ==========================================
-  // ===          GESTIÓN ALUMNOS           ===
-  // ==========================================
   @Post('alumnos')
   async regAlum(@Body() dto: AddStudentDto, @Request() req) { 
     return await this.adminService.addStudentToGroup(dto, req.user.schoolId); 
@@ -65,9 +58,6 @@ export class AdminController {
     return await this.adminService.deleteStudent(id); 
   }
 
-  // ==========================================
-  // ===           GESTIÓN GRUPOS           ===
-  // ==========================================
   @Get('grupos')
   async getGroups(@Request() req) { 
     return await this.adminService.getGroups(req.user.schoolId); 
@@ -83,7 +73,6 @@ export class AdminController {
     return await this.adminService.updateGroup(id, dto); 
   }
   
-  // ✅ ESTA ES LA RUTA QUE FALTABA Y CAUSABA EL 404
   @Get('grupos/:id/alumnos')
   async getAlums(@Param('id') id: string) { 
     return await this.adminService.getStudentsByGroup(id); 
@@ -93,10 +82,6 @@ export class AdminController {
   async deleteGroup(@Param('id') id: string) { 
     return await this.adminService.deleteGroup(id); 
   }
-
-  // ==========================================
-  // ===      GESTIÓN ACADÉMICA (NUEVO)     ===
-  // ==========================================
 
   @Get('materias')
   async getSubjects(@Request() req) {
@@ -117,10 +102,6 @@ export class AdminController {
   async searchUsers(@Query('q') query: string, @Request() req) {
     return await this.adminService.searchAllUsers(query, req.user.schoolId);
   }
-
-  // ==========================================
-  // ===             MENSAJERÍA             ===
-  // ==========================================
   
   @Post('mensajes/enviar')
   async sendMessage(@Body() body: any, @Request() req) {

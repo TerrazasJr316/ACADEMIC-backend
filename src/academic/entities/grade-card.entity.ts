@@ -8,17 +8,14 @@ export class GradeCard {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // RELACIÓN: Pertenece a una inscripción (Alumno)
   @ManyToOne(() => Enrollment)
   @JoinColumn({ name: 'id_inscripcion' })
   enrollment: Enrollment;
 
-  // RELACIÓN: Pertenece a un curso (Materia/Grupo)
   @ManyToOne(() => Course, (course) => course.gradeCards)
   @JoinColumn({ name: 'id_curso' })
   course: Course;
 
-  // Calificaciones con precisión decimal
   @Column({ name: 'parcial_1', type: 'decimal', precision: 4, scale: 2, default: 0 })
   parcial1: number;
 
