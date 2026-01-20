@@ -11,6 +11,9 @@ import { AcademicPeriod } from '../academic/entities/academic-period.entity';
 import { School } from '../tenants/entities/school.entity'; 
 import { InternalMessage } from '../communications/entities/internal-message.entity'; 
 import { Subject } from '../academic/entities/subject.entity';
+import { Course } from '../academic/entities/course.entity';
+
+
 import { UserRole } from '../shared/enums/user-role.enum';
 import { EnrollmentStatus } from '../shared/enums/enrollment-status.enum'; 
 import { AddStudentDto } from './dtos/add-student-to-group.dto';
@@ -29,6 +32,7 @@ export class AdminService {
     @InjectRepository(School) private schoolRepo: Repository<School>, 
     @InjectRepository(InternalMessage) private messageRepo: Repository<InternalMessage>,
     @InjectRepository(Subject) private subjectRepo: Repository<Subject>,
+    @InjectRepository(Course) private courseRepo: Repository<Course>,
   ) {}
 
   async getGroups(schoolId: string) {
@@ -71,7 +75,7 @@ export class AdminService {
     const periodo = await this.periodRepo.createQueryBuilder('p')
       .where('p.id_escuela = :schoolId', { schoolId })
       .getOne();
-    if (!periodo) throw new BadRequestException('No hay ciclo escolar');
+    if (!periodo) throw new BadRequestException('No hay ciclo escolar activo. Crea uno primero.');
 
     const nuevoGrupo = this.groupRepo.create({
       nombre: dto.nombre,
@@ -152,12 +156,19 @@ export class AdminService {
 
   async getTeachers(schoolId: string) {
     const p = await this.teacherProfileRepo.find({ where: { user: { school: { id: schoolId } } }, relations: ['user'] });
-    return p.map(i => ({ 
-      id: i.id, 
-      nombre: i.user?.fullName, 
-      email: i.user?.email, 
-      clave: i.claveEmpleado || i.id.toString().substring(0, 8).toUpperCase() 
-    }));
+    
+    return p.map(i => {
+      // Bandera para saber si ya tiene materias asignadas (para el filtro del frontend)
+      const tieneMaterias = i.materiasAsignadas && Array.isArray(i.materiasAsignadas) && i.materiasAsignadas.length > 0;
+      
+      return { 
+        id: i.id, 
+        nombre: i.user?.fullName, 
+        email: i.user?.email, 
+        clave: i.claveEmpleado || i.id.toString().substring(0, 8).toUpperCase(),
+        tieneMaterias: tieneMaterias 
+      };
+    });
   }
 
   async createTeacher(dto: CreateDocenteDto, schoolId: string) {
@@ -222,6 +233,7 @@ export class AdminService {
     return { message: 'Eliminado' };
   }
 
+
   async getSubjects(schoolId: string) {
     return await this.subjectRepo.find({
       where: { school: { id: schoolId } },
@@ -233,10 +245,59 @@ export class AdminService {
     const nuevaMateria = this.subjectRepo.create({
       nombre: dto.materia,
       codigoMateria: dto.codigo,
-      creditos: 10,
+      creditos: Number(dto.creditos) || 0,
       school: { id: schoolId } as any
     });
     return await this.subjectRepo.save(nuevaMateria);
+  }
+
+  // ✅ CORREGIDO: Se reemplazó id_escuela por 'school: { id: schoolId }'
+  async getPlanes(schoolId: string) {
+    const cursos = await this.courseRepo.find({
+        where: { 
+          // Navegamos por la relación: Group -> Period -> School
+          group: { period: { school: { id: schoolId } } } 
+        },
+        relations: ['teacher', 'teacher.user', 'group', 'subject']
+    });
+
+    return cursos.map(c => ({
+        id: c.id,
+        nombre: c.salonDefault || 'Sin nombre', 
+        salon_default: c.salonDefault,
+        docente_nombre: c.teacher?.user?.fullName || 'Sin asignar',
+        grupo_nombre: c.group?.nombre || '---',
+        materia_nombre: c.subject?.nombre || '---', // Puede ser null
+        id_docente: c.teacher?.id
+    }));
+  }
+
+  // ✅ CORREGIDO: createPlan ahora usa la relación 'school' correctamente
+  async createPlan(dto: any, schoolId: string) {
+    try {
+        // Buscamos un grupo válido en la escuela
+        const grupo = await this.groupRepo.findOne({ 
+          where: { 
+            period: { school: { id: schoolId } } // Corregido el error EntityPropertyNotFoundError
+          } 
+        });
+
+        if (!grupo) {
+          throw new BadRequestException('Error: No hay grupos creados en este ciclo escolar. Por favor crea un grupo primero.');
+        }
+
+        const nuevoCurso = this.courseRepo.create({
+          salonDefault: dto.nombre, 
+          teacher: { id: dto.id_docente } as any,
+          group: grupo, 
+          // subject: null // Ahora la BD lo acepta (nullable: true)
+        });
+        
+        return await this.courseRepo.save(nuevoCurso);
+    } catch (error) {
+        console.error("Error al guardar Carrera:", error);
+        throw error;
+    }
   }
 
   async deleteSubject(id: string) {
