@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-// Asegúrate de que esta ruta sea correcta según tu estructura de carpetas
 import { Course } from '../../academic/entities/course.entity';
 
 @Entity('perfiles_docente')
@@ -13,7 +12,6 @@ export class TeacherProfile {
   user: User;
 
   @Column({ name: 'clave_empleado', unique: true, nullable: true }) 
-  // Puse nullable: true por seguridad si ya tienes datos, si limpiaste la BD quítale el nullable
   claveEmpleado: string;
 
   @Column({ nullable: true })
@@ -23,7 +21,7 @@ export class TeacherProfile {
   telefono: string;
 
   @Column({ name: 'titulo_academico', nullable: true })
-  tituloAcademico: string; // Ej: "Licenciado", "Maestro"
+  tituloAcademico: string;
 
   @Column({ nullable: true })
   ciudad: string;
@@ -34,7 +32,13 @@ export class TeacherProfile {
   @Column({ type: 'text', nullable: true })
   habilidades: string;
 
-  // Relación inversa: Un profe tiene muchos cursos
+  // ✅ NUEVAS COLUMNAS PARA PERSISTENCIA DE MATERIAS Y HORARIOS
+  @Column({ type: 'json', nullable: true })
+  materiasAsignadas: any;
+
+  @Column({ type: 'json', nullable: true })
+  horario: any;
+
   @OneToMany(() => Course, (course) => course.teacher)
   courses: Course[];
 }

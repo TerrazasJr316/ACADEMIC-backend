@@ -13,58 +13,56 @@ export class AuthService {
     private readonly jwtService: JwtService 
   ) {}
 
-  // --- 1. VALIDACIÓN DE CREDENCIALES (ADMIN, DOCENTE, ALUMNO) ---
+  // --- VALIDACIÓN ---
   async validateUser(email: string, pass: string): Promise<any> {
     const cleanEmail = email.toLowerCase().trim();
     
-    // Buscamos al usuario. La tabla 'User' debe contener a todos (o estar relacionada)
     const user = await this.userRepository.findOne({ 
       where: { email: cleanEmail },
-      select: ['id', 'email', 'password', 'fullName', 'rol'], // 'rol' define si es admin, docente o alumno
+      select: ['id', 'email', 'password', 'fullName', 'rol'], 
       relations: ['school'] 
     });
 
-    if (user) {
-      const isMatch = await bcrypt.compare(pass.trim(), user.password);
-      
-      if (isMatch) {
-        // Retornamos todo excepto el password
-        const { password, ...result } = user;
-        return result;
-      }
+    if (user && await bcrypt.compare(pass.trim(), user.password)) {
+      const { password, ...result } = user;
+      return result;
     }
     return null; 
   }
 
-  // --- 2, 3 y 4. AUTENTICACIÓN Y DASHBOARD POR ROL ---
+  // --- LOGIN ---
   async login(user: any) {
-      // El payload es lo que viaja encriptado en el navegador del usuario
       const payload = { 
         sub: user.id, 
-        rol: user.rol, // 'admin', 'docente', 'alumno'
+        email: user.email, 
+        rol: user.rol, 
         schoolId: user.school?.id 
       };
 
+      // ✅ FIRMAMOS CON LA MISMA CLAVE FIJA
+      // Usamos el jwtService configurado en el Módulo (que ya tiene la clave 'CLAVE_SECRETA_MAESTRA_12345')
       return {
-        access_token: this.jwtService.sign(payload),
+        access_token: this.jwtService.sign(payload), 
         user: {
           id: user.id,
           fullName: user.fullName,
           email: user.email,
-          rol: user.rol // El frontend leerá esto para saber a qué dashboard enviar
+          rol: user.rol 
         }
       };
     }
 
-  // --- LÓGICA DE RECUPERACIÓN (Mantenida igual, es correcta) ---
+  // --- RECOVERY ---
   async requestPasswordReset(email: string) {
     const user = await this.userRepository.findOne({ where: { email: email.toLowerCase().trim() } });
-    if (!user) throw new NotFoundException('No existe un usuario con ese correo.');
+    if (!user) throw new NotFoundException('Usuario no encontrado.');
 
     const payload = { sub: user.id, type: 'recovery' };
+    
+    // Aquí sí especificamos secret porque es un token especial de corta duración
     const token = this.jwtService.sign(payload, { 
       expiresIn: '15m', 
-      secret: process.env.JWT_SECRET || 'SECRET_KEY_POR_DEFECTO' 
+      secret: 'CLAVE_SECRETA_MAESTRA_12345' 
     });
 
     return { 
@@ -75,7 +73,7 @@ export class AuthService {
 
   async resetPassword(token: string, newPassword: string) {
     try {
-      const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET || 'SECRET_KEY_POR_DEFECTO' });
+      const payload = this.jwtService.verify(token, { secret: 'CLAVE_SECRETA_MAESTRA_12345' });
       const user = await this.userRepository.findOne({ where: { id: payload.sub } });
       
       if (!user) throw new NotFoundException('Usuario no encontrado');
@@ -86,7 +84,7 @@ export class AuthService {
 
       return { message: 'Contraseña actualizada correctamente.' };
     } catch (error) {
-      throw new BadRequestException('El enlace ha expirado o no es válido.');
+      throw new BadRequestException('Token inválido o expirado.');
     }
   }
 }

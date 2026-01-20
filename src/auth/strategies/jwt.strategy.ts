@@ -8,22 +8,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      // Usamos la variable de entorno o tu clave por defecto (para desarrollo)
-      secretOrKey: process.env.JWT_SECRET || '428ec0f41dd5af3c71a1964bcfb59723', 
+      // ✅ LA MISMA CLAVE EXACTA QUE EN EL MÓDULO
+      secretOrKey: 'CLAVE_SECRETA_MAESTRA_12345', 
     });
   }
 
   async validate(payload: any) {
-    // Si el token es falso o expiró, NestJS lanza Unauthorized automáticamente antes de llegar aquí.
     if (!payload) {
-        throw new UnauthorizedException();
+        throw new UnauthorizedException('Token inválido o vacío');
     }
     
-    // Inyectamos esto en "req.user"
+    // ✅ Normalizamos el rol a mayúsculas
     return { 
       userId: payload.sub, 
       email: payload.email, 
-      rol: payload.rol,
+      rol: payload.rol ? payload.rol.toUpperCase() : 'USER', 
       schoolId: payload.schoolId 
     };
   }

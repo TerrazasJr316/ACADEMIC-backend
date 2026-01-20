@@ -35,7 +35,6 @@ export class StudentService {
             direccion: profile.direccion,
             genero: profile.genero,
             fechaNacimiento: profile.fechaNacimiento,
-            tipoSangre: profile.tipoSangre,
         };
     }
 

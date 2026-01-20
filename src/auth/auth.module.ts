@@ -10,20 +10,19 @@ import { LocalStrategy } from './strategies/local.strategy';
 
 @Module({
   imports: [
-    // 1. Permitimos usar la tabla Usuarios en este módulo
     TypeOrmModule.forFeature([User]),
-    // 2. Activamos Passport
-    PassportModule,
+    // ✅ 1. Activar Passport con estrategia 'jwt' por defecto
+    PassportModule.register({ defaultStrategy: 'jwt' }),
 
-    // 3. Configuramos la máquina de Tokens (JWT)
+    // ✅ 2. Configurar el Módulo JWT con la CLAVE MAESTRA FIJA
     JwtModule.register({
-      // ¡AQUI ESTABA EL ERROR! Ahora usa la misma clave que la Estrategia
-      secret: process.env.JWT_SECRET || '428ec0f41dd5af3c71a1964bcfb59723', 
-      signOptions: { expiresIn: '1d' }, // El token dura 1 día
+      secret: 'CLAVE_SECRETA_MAESTRA_12345', // <--- SIN process.env PARA EVITAR ERRORES
+      signOptions: { expiresIn: '1d' },
     }),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, LocalStrategy],
-  exports: [JwtStrategy, PassportModule]
+  // ✅ 3. VITAL: Exportar esto para que AdminModule pueda usar el guardián
+  exports: [JwtStrategy, PassportModule, AuthService]
 })
 export class AuthModule {}
