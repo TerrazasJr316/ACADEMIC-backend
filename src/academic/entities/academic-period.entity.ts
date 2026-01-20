@@ -12,7 +12,7 @@ export class AcademicPeriod {
   school: School;
 
   @Column()
-  nombre: string; // Ej: "2024-A"
+  nombre: string; 
 
   @Column({ name: 'fecha_inicio', type: 'date' })
   fechaInicio: Date;
@@ -23,7 +23,6 @@ export class AcademicPeriod {
   @Column({ name: 'es_actual', default: false })
   esActual: boolean;
 
-  // Relación inversa (Un ciclo tiene muchos grupos)
   @OneToMany(() => Group, (group) => group.period)
   groups: Group[];
 }

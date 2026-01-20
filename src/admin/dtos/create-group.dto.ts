@@ -9,7 +9,7 @@ export class CreateGroupDto {
   @IsString()
   nombre: string; 
 
-  @IsOptional() // 👈 Cambiado a opcional para que no de error 400 si el front no lo manda
+  @IsOptional() // 
   @IsNumber()
   limiteAlumnos?: number; 
 

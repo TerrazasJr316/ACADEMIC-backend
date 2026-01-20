@@ -1,4 +1,3 @@
-// CAMBIA EL IMPORT INICIAL POR:
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, OneToOne } from 'typeorm';
 import { School } from '../../tenants/entities/school.entity';
 import { UserRole } from '../../shared/enums/user-role.enum';
@@ -11,7 +10,6 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // RELACIÓN: Muchos usuarios -> Una Escuela
   @ManyToOne(() => School, (school) => school.users)
   @JoinColumn({ name: 'id_escuela' })
   school: School;
@@ -19,7 +17,7 @@ export class User {
   @Column({ name: 'correo_electronico', unique: true })
   email: string;
 
-  @Column({ name: 'contrasena', select: false }) // select: false protege el hash
+  @Column({ name: 'contrasena', select: false }) 
   password: string;
 
   @Column({ name: 'nombre_completo' })

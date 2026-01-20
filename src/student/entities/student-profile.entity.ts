@@ -32,7 +32,6 @@ export class StudentProfile {
   @Column({ type: 'text', nullable: true })
   direccion: string;
 
-  // ✅ CAMPOS PARA EL TUTOR (Capturados en el modal)
   @Column({ name: 'nombre_tutor', length: 150, nullable: true })
   tutor: string;
 

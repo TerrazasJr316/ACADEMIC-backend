@@ -2,7 +2,7 @@ import { IsString, IsNotEmpty, Length, IsDateString, IsUUID } from 'class-valida
 
 export class CreateBillingDto {
   @IsUUID()
-  schoolId: string; // Necesitas el ID para saber a quién vincularlo
+  schoolId: string; 
 
   @IsString()
   @IsNotEmpty()
@@ -17,7 +17,7 @@ export class CreateBillingDto {
   tokenPago: string;
 
   @IsDateString()
-  fechaVencimiento: string; // Formato YYYY-MM-DD
+  fechaVencimiento: string; 
 
   @IsString()
   direccionFiscal: string;

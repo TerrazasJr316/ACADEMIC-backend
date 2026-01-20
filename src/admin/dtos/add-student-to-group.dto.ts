@@ -7,7 +7,7 @@ export class AddStudentDto {
 
   @IsNotEmpty()
   @IsString()
-  nombre: string; // Sincronizado con tu adminService.registrarAlumno
+  nombre: string; 
 
   @IsNotEmpty()
   @IsString()

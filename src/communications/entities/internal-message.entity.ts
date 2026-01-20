@@ -6,12 +6,10 @@ export class InternalMessage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // QUIEN ENVÍA
   @ManyToOne(() => User)
   @JoinColumn({ name: 'id_remitente' })
   remitente: User;
 
-  // QUIEN RECIBE
   @ManyToOne(() => User)
   @JoinColumn({ name: 'id_destinatario' })
   destinatario: User;

@@ -7,7 +7,6 @@ export class Notification {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // RELACIÓN N a 1: Un usuario recibe muchas notificaciones
   @ManyToOne(() => User)
   @JoinColumn({ name: 'id_usuario' })
   user: User;

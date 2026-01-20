@@ -8,7 +8,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      // ✅ LA MISMA CLAVE EXACTA QUE EN EL MÓDULO
       secretOrKey: 'CLAVE_SECRETA_MAESTRA_12345', 
     });
   }
@@ -18,7 +17,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         throw new UnauthorizedException('Token inválido o vacío');
     }
     
-    // ✅ Normalizamos el rol a mayúsculas
     return { 
       userId: payload.sub, 
       email: payload.email, 

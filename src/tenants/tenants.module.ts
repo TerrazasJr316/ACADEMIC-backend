@@ -9,10 +9,9 @@ import { StripeWebhookController } from './stripe-webhook.controller';
 
 
 @Module({
-  // 3. REGISTRARLAS AQUÍ:
   imports: [TypeOrmModule.forFeature([School, BillingInfo])], 
   controllers: [TenantsController, StripeWebhookController],
   providers: [TenantsService, StripeService],
-  exports: [TenantsService, TypeOrmModule] // Opcional, por si otros módulos necesitan usarlo
+  exports: [TenantsService, TypeOrmModule] 
 })
 export class TenantsModule {}

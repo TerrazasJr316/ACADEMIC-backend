@@ -58,7 +58,15 @@ export class AcademicController {
     return this.academicService.getStudentGradesByPeriod(studentId, periodo || '2025-1');
   }
 
+<<<<<<< HEAD
   @ApiOperation({ summary: 'Consultar historial de asistencias' })
+=======
+  @Get('my-academic-history/:studentId')
+  getAcademicHistory(@Param('studentId') studentId: string) {
+    return this.academicService.getAcademicHistory(studentId);
+  }
+
+>>>>>>> 56770a7f9bfbcefffe294f89f60d85ffd9b9843d
   @Get('my-attendance/:studentId')
   getMyAttendance(@Param('studentId') studentId: string) {
     return this.academicService.getStudentAttendance(studentId);
@@ -177,5 +185,15 @@ export class AcademicController {
   @Patch('messages/read/:id')
   readMessage(@Param('id') id: string) {
     return this.academicService.markMessageRead(id);
+  }
+
+  @Get('dashboard/summary/:studentId')
+  getDashboardSummary(@Param('studentId') studentId: string) {
+    return this.academicService.getStudentDashboardSummary(studentId);
+  }
+
+  @Get('student-profile/:userId')
+  getStudentProfileData(@Param('userId') userId: string) {
+    return this.academicService.getStudentProfile(userId);
   }
 }

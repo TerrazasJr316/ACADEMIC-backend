@@ -10,7 +10,6 @@ import { UserRole } from '../shared/enums/user-role.enum';
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
-  // NUEVA RUTA: Resuelve el error 404 inicial
   @Get('default-school')
   getDefaultSchool() {
     return {

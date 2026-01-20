@@ -1,6 +1,5 @@
 import { IsEmail, IsNotEmpty, IsString, IsOptional, IsEnum, MinLength } from 'class-validator';
 
-// Asegúrate de que el Enum coincida con el que usas en tu entity
 export enum PlanType {
   BASIC = 'BASIC',
   PRO = 'PRO',
@@ -19,8 +18,6 @@ export class RegisterTenantDto {
   @IsNotEmpty()
   emailAdmin: string;
 
-  // El nombre puede ser opcional si el form básico no lo pide, 
-  // pero la contraseña AHORA ES OBLIGATORIA SIEMPRE.
   @IsOptional() 
   nombreAdmin?: string;
 
@@ -33,7 +30,6 @@ export class RegisterTenantDto {
   @IsEnum(PlanType)
   plan: PlanType; 
 
-  // --- CAMPOS DE PAGO (Siguen siendo opcionales para BASIC) ---
   @IsOptional()
   @IsString()
   tokenPago?: string;

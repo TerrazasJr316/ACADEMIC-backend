@@ -8,7 +8,7 @@ export class Message {
   id: string;
 
   @Column()
-  destinatario: string; // Ej: 'docentes', 'alumnos', 'todos'
+  destinatario: string; 
 
   @Column()
   asunto: string;
@@ -19,12 +19,10 @@ export class Message {
   @CreateDateColumn()
   fechaEnvio: Date;
 
-  // Relación: El mensaje pertenece a UNA escuela (Multi-tenant)
   @ManyToOne(() => School)
   @JoinColumn({ name: 'schoolId' })
   school: School;
 
-  // Relación: El mensaje fue escrito por UN usuario (El Admin)
   @ManyToOne(() => User)
   @JoinColumn({ name: 'senderId' })
   sender: User;

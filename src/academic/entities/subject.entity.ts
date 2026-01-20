@@ -11,10 +11,10 @@ export class Subject {
   school: School;
 
   @Column()
-  nombre: string; // Ej: "Matemáticas I"
+  nombre: string; 
 
   @Column({ name: 'codigo_materia' })
-  codigoMateria: string; // Ej: "MAT-101"
+  codigoMateria: string; 
 
   @Column({ type: 'int' })
   creditos: number;

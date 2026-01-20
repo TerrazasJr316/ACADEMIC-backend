@@ -1,10 +1,7 @@
-// src/admin/admin.service.ts
-
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-
 import { User } from '../users/entities/user.entity';
 import { Group } from '../academic/entities/group.entity';
 import { Enrollment } from '../academic/entities/enrollment.entity';
@@ -14,7 +11,6 @@ import { AcademicPeriod } from '../academic/entities/academic-period.entity';
 import { School } from '../tenants/entities/school.entity'; 
 import { InternalMessage } from '../communications/entities/internal-message.entity'; 
 import { Subject } from '../academic/entities/subject.entity';
-
 import { UserRole } from '../shared/enums/user-role.enum';
 import { EnrollmentStatus } from '../shared/enums/enrollment-status.enum'; 
 import { AddStudentDto } from './dtos/add-student-to-group.dto';
@@ -34,10 +30,6 @@ export class AdminService {
     @InjectRepository(InternalMessage) private messageRepo: Repository<InternalMessage>,
     @InjectRepository(Subject) private subjectRepo: Repository<Subject>,
   ) {}
-
-  // ==========================================
-  // ===          GESTIÓN DE GRUPOS         ===
-  // ==========================================
 
   async getGroups(schoolId: string) {
     try {
@@ -103,10 +95,6 @@ export class AdminService {
     return await this.groupRepo.delete(id);
   }
 
-  // ==========================================
-  // ===         GESTIÓN DE ALUMNOS         ===
-  // ==========================================
-
   async addStudentToGroup(dto: AddStudentDto, schoolId: string) {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dto.grupoId);
     const targetGroup = await this.groupRepo.findOne({ where: isUUID ? { id: dto.grupoId } : { nombre: dto.grupoId } });
@@ -162,10 +150,6 @@ export class AdminService {
     return { message: 'Alumno eliminado' };
   }
 
-  // ==========================================
-  // ===         GESTIÓN DE DOCENTES        ===
-  // ==========================================
-
   async getTeachers(schoolId: string) {
     const p = await this.teacherProfileRepo.find({ where: { user: { school: { id: schoolId } } }, relations: ['user'] });
     return p.map(i => ({ 
@@ -199,7 +183,6 @@ export class AdminService {
     return { message: 'Docente registrado', id: newProfile.id };
   }
 
-  // ✅ CORREGIDO: getTeacherProfile "aplanado" para el frontend
   async getTeacherProfile(id: string) {
     const profile = await this.teacherProfileRepo.findOne({ 
         where: { id }, 
@@ -210,7 +193,7 @@ export class AdminService {
 
     return {
       ...profile,
-      id: profile.id, // ID del perfil docente
+      id: profile.id, 
       nombre: profile.user?.fullName || 'Sin nombre',
       email: profile.user?.email || 'Sin correo',
       clave: profile.claveEmpleado || 'S/C'
@@ -239,10 +222,6 @@ export class AdminService {
     return { message: 'Eliminado' };
   }
 
-  // ==========================================
-  // ===      GESTIÓN ACADÉMICA (NUEVO)     ===
-  // ==========================================
-
   async getSubjects(schoolId: string) {
     return await this.subjectRepo.find({
       where: { school: { id: schoolId } },
@@ -263,10 +242,6 @@ export class AdminService {
   async deleteSubject(id: string) {
     return await this.subjectRepo.delete(id);
   }
-
-  // ==========================================
-  // ===          BÚSQUEDA Y MENSAJES       ===
-  // ==========================================
 
   async searchAllUsers(query: string, schoolId: string) {
     if (!query || query.length < 2) return [];

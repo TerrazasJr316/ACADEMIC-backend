@@ -11,6 +11,7 @@ import { AttendanceDetail } from '../entities/attendance-detail.entity';
 import { AttendanceStatus } from '../../shared/enums/attendance-status.enum';
 import { InternalMessage } from '../../communications/entities/internal-message.entity';
 import { User } from '../../users/entities/user.entity';
+import { StudentProfile } from 'src/student/entities/student-profile.entity';
 
 export interface GradeInput {
   id: string;
@@ -50,9 +51,9 @@ export class AcademicService {
   ) { }
 
 
-  async getStudentCourses(userId: string) { // Recibimos userId
+  async getStudentCourses(userId: string) {
     const enrollments = await this.enrollmentRepo.find({
-      where: { student: { user: { id: userId } } }, // 👈 Buscamos por la relación con User
+      where: { student: { user: { id: userId } } },
       relations: ['group'],
     });
 
@@ -79,7 +80,7 @@ export class AcademicService {
   async getStudentGradesByPeriod(userId: string, periodoNombre: string) {
     const grades = await this.gradeRepo.find({
       where: {
-        enrollment: { student: { user: { id: userId } } }, // 👈 Buscamos por User
+        enrollment: { student: { user: { id: userId } } },
         course: { group: { period: { nombre: periodoNombre } } },
       },
       relations: ['course', 'course.subject'],
@@ -99,7 +100,6 @@ export class AcademicService {
   async getStudentAttendance(userId: string) {
     const asistencias = await this.attendanceRepo.find({
       where: { enrollment: { student: { user: { id: userId } } } },
-      // 🔥 AGREGAMOS RELACIONES para obtener el nombre de la materia
       relations: ['course', 'course.subject'],
       order: { fecha: 'DESC' },
     });
@@ -116,15 +116,13 @@ export class AcademicService {
         faltas: faltas,
         retardos: retardos,
       },
-      // 👇 ENRIQUECEMOS LA LISTA DE DETALLES
+
       fechas: asistencias
-        .filter((a) => a.estado !== AttendanceStatus.ASISTENCIA) // Filtramos solo incidencias
+        .filter((a) => a.estado !== AttendanceStatus.ASISTENCIA)
         .map((a) => ({
           id: a.id,
           fecha: new Date(a.fecha).toISOString().split('T')[0],
-          // Mapeamos el nombre de la materia
           materia: a.course?.subject?.nombre || 'Materia Desconocida',
-          // Mapeamos el estado (Falta/Retardo) para el front
           tipo: a.estado === AttendanceStatus.FALTA ? 'Falta' : 'Retardo',
         })),
       recordatorios: [
@@ -408,6 +406,121 @@ export class AcademicService {
       materiasImpartidas: 0,
       gruposAsignados: 0,
       estudiantesAsistenciaCritica: 0,
+    };
+  }
+
+  async getAcademicHistory(userId: string) {
+    const grades = await this.gradeRepo.find({
+      where: { enrollment: { student: { user: { id: userId } } } },
+      relations: ['course', 'course.subject', 'course.group', 'course.group.period'],
+      order: { course: { group: { period: { fechaInicio: 'DESC' } } } } // Ordenar por fecha
+    });
+
+    const materiasCursadas = grades.filter(g => g.promedioFinal !== null);
+
+    const sumaPromedios = materiasCursadas.reduce((acc, curr) => acc + Number(curr.promedioFinal || 0), 0);
+
+    const promedioGeneral = materiasCursadas.length > 0 ? (sumaPromedios / materiasCursadas.length) : 0;
+
+    const asignaturasAprobadas = materiasCursadas.filter(g => Number(g.promedioFinal || 0) >= 70).length;
+
+    const calificacionesDetalle = grades.map(g => ({
+      asignatura: g.course?.subject?.nombre || 'Materia Desconocida',
+      promedio: Number(g.promedioFinal || 0),
+      periodo: g.course?.group?.period?.nombre || 'Indefinido'
+    }));
+
+    return {
+      promedioGeneral: Number(promedioGeneral.toFixed(1)),
+      asignaturasAprobadas,
+      calificacionesDetalle,
+      documentosDisponibles: []
+    };
+  }
+
+  async getStudentDashboardSummary(userId: string) {
+    const boletas = await this.gradeRepo.find({
+      where: { enrollment: { student: { user: { id: userId } } } },
+      select: ['promedioFinal'],
+    });
+
+    const validGrades = boletas.filter(b => b.promedioFinal !== null && Number(b.promedioFinal) > 0);
+    const suma = validGrades.reduce((acc, curr) => acc + Number(curr.promedioFinal), 0);
+    const promedioGeneral = validGrades.length > 0 ? (suma / validGrades.length) : 0;
+
+    const asistencias = await this.attendanceRepo.find({
+      where: { enrollment: { student: { user: { id: userId } } } },
+    });
+
+    const totalClases = asistencias.length;
+    const faltas = asistencias.filter(a => a.estado === AttendanceStatus.FALTA).length;
+    const asistenciaPorcentaje = totalClases > 0
+      ? Math.round(((totalClases - faltas) / totalClases) * 100)
+      : 100;
+
+    const mensajes = await this.msgRepo.find({
+      where: { destinatario: { id: userId } },
+      order: { fechaEnvio: 'DESC' },
+      take: 5,
+    });
+
+    return {
+      promedioGeneral: Number(promedioGeneral.toFixed(1)),
+      asistenciaPorcentaje,
+      notificaciones: mensajes.map(msg => ({
+        id: msg.id,
+        asunto: msg.asunto,
+        cuerpoMensaje: msg.cuerpoMensaje,
+        fechaEnvio: msg.fechaEnvio,
+        leido: msg.leido
+      }))
+    };
+  }
+
+  async getStudentProfile(userId: string) {
+    const student = await this.enrollmentRepo.manager.getRepository(StudentProfile).findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+
+    if (!student) throw new NotFoundException('Perfil de estudiante no encontrado');
+    const grades = await this.gradeRepo.find({
+      where: { enrollment: { student: { id: student.id } } },
+      select: ['promedioFinal'],
+    });
+
+    const aprobadas = grades.filter(g => Number(g.promedioFinal) >= 70).length;
+    const validGrades = grades.filter(g => Number(g.promedioFinal) > 0);
+    const suma = validGrades.reduce((acc, curr) => acc + Number(curr.promedioFinal), 0);
+    const promedio = validGrades.length > 0 ? suma / validGrades.length : 0;
+
+    return {
+      resumen: {
+        name: student.user.fullName,
+        id: student.matricula || 'S/M',
+        career: 'Ingeniería en Sistemas',
+        semester: student.gradoActual || 'N/A',
+        average: Number(promedio.toFixed(1)),
+      },
+      personal: {
+        fullName: student.nombreCompleto || student.user.fullName,
+        id: student.matricula,
+        birthDate: student.fechaNacimiento ? student.fechaNacimiento.toString() : '---',
+        gender: student.genero || '---',
+        email: student.user.email,
+        phone: student.telefono || '---',
+        address: student.direccion || '---',
+        curp: student.curp || '---',
+      },
+      academic: {
+        semester: student.gradoActual || '---',
+        average: Number(promedio.toFixed(1)),
+        status: student.user.isActive ? 'Activo' : 'Inactivo',
+        approvedSubjects: aprobadas,
+      },
+      payment: {
+        balanceDue: 0.00,
+      }
     };
   }
 }

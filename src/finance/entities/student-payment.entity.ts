@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { StudentProfile } from '../../student/entities/student-profile.entity';
-import { TransactionCatalog } from './transaction-catalog.entity'; // Tu entidad previa
+import { TransactionCatalog } from './transaction-catalog.entity'; 
 import { PaymentStatus } from '../../shared/enums/payment-status.enum';
 
 @Entity('pagos_alumno')
@@ -14,10 +14,10 @@ export class StudentPayment {
 
   @ManyToOne(() => TransactionCatalog, { nullable: true })
   @JoinColumn({ name: 'id_tramite' })
-  transactionCatalog?: TransactionCatalog; // Opcional, por si pagan algo fuera de catálogo
+  transactionCatalog?: TransactionCatalog; 
 
   @Column()
-  concepto: string; // Se puede copiar del catálogo o ser custom
+  concepto: string; 
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   monto: number;
