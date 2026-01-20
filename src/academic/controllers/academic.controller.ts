@@ -42,6 +42,11 @@ export class AcademicController {
     return this.academicService.getStudentGradesByPeriod(studentId, periodo || '2025-1');
   }
 
+  @Get('my-academic-history/:studentId')
+  getAcademicHistory(@Param('studentId') studentId: string) {
+    return this.academicService.getAcademicHistory(studentId);
+  }
+
   @Get('my-attendance/:studentId')
   getMyAttendance(@Param('studentId') studentId: string) {
     return this.academicService.getStudentAttendance(studentId);
@@ -122,5 +127,10 @@ export class AcademicController {
   @Patch('messages/read/:id')
   readMessage(@Param('id') id: string) {
     return this.academicService.markMessageRead(id);
+  }
+
+  @Get('dashboard/summary/:studentId')
+  getDashboardSummary(@Param('studentId') studentId: string) {
+    return this.academicService.getStudentDashboardSummary(studentId);
   }
 }

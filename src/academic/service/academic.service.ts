@@ -410,4 +410,85 @@ export class AcademicService {
       estudiantesAsistenciaCritica: 0,
     };
   }
+
+  async getAcademicHistory(userId: string) {
+    // 1. Buscamos todas las boletas del alumno
+    const grades = await this.gradeRepo.find({
+      where: { enrollment: { student: { user: { id: userId } } } },
+      relations: ['course', 'course.subject', 'course.group', 'course.group.period'],
+      order: { course: { group: { period: { fechaInicio: 'DESC' } } } } // Ordenar por fecha
+    });
+
+    // 2. Filtramos materias que tengan calificación final registrada
+    const materiasCursadas = grades.filter(g => g.promedioFinal !== null);
+
+    // 3. Cálculos matemáticos
+    const sumaPromedios = materiasCursadas.reduce((acc, curr) => acc + Number(curr.promedioFinal || 0), 0);
+
+    // Promedio General
+    const promedioGeneral = materiasCursadas.length > 0 ? (sumaPromedios / materiasCursadas.length) : 0;
+
+    // Conteo de Aprobadas (Asumiendo que 70 es la mínima aprobatoria según tu función getTeacherStats)
+    const asignaturasAprobadas = materiasCursadas.filter(g => Number(g.promedioFinal || 0) >= 70).length;
+
+    // 4. Mapeo para el Frontend
+    const calificacionesDetalle = grades.map(g => ({
+      asignatura: g.course?.subject?.nombre || 'Materia Desconocida',
+      promedio: Number(g.promedioFinal || 0),
+      periodo: g.course?.group?.period?.nombre || 'Indefinido'
+    }));
+
+    return {
+      promedioGeneral: Number(promedioGeneral.toFixed(1)),
+      asignaturasAprobadas,
+      calificacionesDetalle,
+      documentosDisponibles: [] // Aquí podrías agregar lógica para documentos reales si existieran
+    };
+  }
+
+  async getStudentDashboardSummary(userId: string) {
+    // 1. CALCULAR PROMEDIO GENERAL
+    const boletas = await this.gradeRepo.find({
+      where: { enrollment: { student: { user: { id: userId } } } },
+      select: ['promedioFinal'],
+    });
+
+    // Filtramos solo las que tienen calificación numérica válida
+    const validGrades = boletas.filter(b => b.promedioFinal !== null && Number(b.promedioFinal) > 0);
+    const suma = validGrades.reduce((acc, curr) => acc + Number(curr.promedioFinal), 0);
+    const promedioGeneral = validGrades.length > 0 ? (suma / validGrades.length) : 0;
+
+    // 2. CALCULAR ASISTENCIA GLOBAL
+    const asistencias = await this.attendanceRepo.find({
+      where: { enrollment: { student: { user: { id: userId } } } },
+    });
+
+    const totalClases = asistencias.length;
+    // Asumimos que "FALTA" resta, pero "RETARDO" y "ASISTENCIA" suman (o ajusta según tu regla)
+    const faltas = asistencias.filter(a => a.estado === AttendanceStatus.FALTA).length;
+    // Fórmula simple: (Total - Faltas) / Total
+    const asistenciaPorcentaje = totalClases > 0
+      ? Math.round(((totalClases - faltas) / totalClases) * 100)
+      : 100; // Si no hay registros, asumimos 100% inicial
+
+    // 3. OBTENER ÚLTIMAS 5 NOTIFICACIONES
+    const mensajes = await this.msgRepo.find({
+      where: { destinatario: { id: userId } },
+      order: { fechaEnvio: 'DESC' },
+      take: 5, // Solo las 5 más recientes para el dashboard
+    });
+
+    // 4. RETORNAR OBJETO CONSOLIDADO
+    return {
+      promedioGeneral: Number(promedioGeneral.toFixed(1)),
+      asistenciaPorcentaje,
+      notificaciones: mensajes.map(msg => ({
+        id: msg.id,
+        asunto: msg.asunto,
+        cuerpoMensaje: msg.cuerpoMensaje,
+        fechaEnvio: msg.fechaEnvio,
+        leido: msg.leido
+      }))
+    };
+  }
 }
