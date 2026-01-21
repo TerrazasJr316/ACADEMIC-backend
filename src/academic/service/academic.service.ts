@@ -54,16 +54,12 @@ export class AcademicService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) { }
 
-  // =================================================================
-  //  1. MIS CURSOS (CORREGIDO PARA EVITAR ERROR 500)
-  // =================================================================
   async getStudentCourses(userId: string) {
     const enrollments = await this.enrollmentRepo.find({
       where: { student: { user: { id: userId } } },
       relations: ['group'],
     });
 
-    // FILTRO DE SEGURIDAD: Solo procesamos inscripciones que tengan grupo válido
     const validEnrollments = enrollments.filter(e => e.group);
 
     if (!validEnrollments.length) return [];
@@ -72,18 +68,46 @@ export class AcademicService {
 
     const courses = await this.courseRepo.find({
       where: { group: { id: In(groupIds) } },
-      relations: ['subject', 'teacher', 'teacher.user', 'schedules'],
+      relations: ['subject', 'teacher', 'teacher.user', 'schedules', 'group'],
     });
 
-    return courses.map((c) => ({
-      id: c.id,
-      materia: c.subject?.nombre || 'Sin Nombre',
-      profesor: c.teacher?.user?.fullName || 'Por asignar',
-      horarios: c.schedules?.map((s) => ({
+    // --- LÓGICA DE FUSIÓN ---
+    // Usamos un Mapa para agrupar materias por su nombre
+    const materiasMap = new Map<string, any>();
+
+    courses.forEach((c) => {
+      const nombreMateria = c.subject?.nombre || 'Sin Nombre';
+
+      // Formateamos los horarios de este curso específico
+      const nuevosHorarios = c.schedules?.map((s) => ({
         dia: s.diaSemana,
         hora: `${s.horaInicio.toString().slice(0, 5)} - ${s.horaFin.toString().slice(0, 5)}`,
-      })) || [],
-    }));
+      })) || [];
+
+      if (materiasMap.has(nombreMateria)) {
+        // CASO A: Ya existe la materia en la lista -> FUSIONAMOS
+        const existente = materiasMap.get(nombreMateria);
+
+        // 1. Combinamos los horarios
+        existente.horarios = [...existente.horarios, ...nuevosHorarios];
+
+        // 2. Opcional: Si el profesor es diferente, podrías concatenarlo, 
+        // pero por ahora mantenemos el principal para no ensuciar la UI.
+
+      } else {
+        // CASO B: Es la primera vez que vemos esta materia -> CREAMOS
+        materiasMap.set(nombreMateria, {
+          id: c.id,
+          materia: nombreMateria,
+          profesor: c.teacher?.user?.fullName || 'Por asignar',
+          semestre: c.group?.semestre || 1,
+          horarios: nuevosHorarios
+        });
+      }
+    });
+
+    // Convertimos el mapa de vuelta a un array para el Frontend
+    return Array.from(materiasMap.values());
   }
 
   // =================================================================
@@ -101,7 +125,19 @@ export class AcademicService {
     const profile = user.studentProfile;
     // Datos por defecto si no hay perfil creado aún
     const matricula = profile?.matricula || 'S/M';
-    const grado = profile?.gradoActual || '1';
+    let grado = profile?.gradoActual || '1';
+
+    // [CORRECCIÓN]: Si el grado es N/A, buscamos la inscripción más reciente para sacar el semestre real
+    if (!grado || grado === 'N/A') {
+      const lastEnrollment = await this.enrollmentRepo.findOne({
+        where: { student: { id: profile.id } },
+        relations: ['group'],
+        order: { fechaInscripcion: 'DESC' }
+      });
+      if (lastEnrollment && lastEnrollment.group) {
+        grado = lastEnrollment.group.semestre.toString();
+      }
+    }
 
     // Calculamos el promedio real
     let promedio = 0;
@@ -203,15 +239,49 @@ export class AcademicService {
       },
       relations: ['course', 'course.subject'],
     });
-    return grades.map((g) => ({
-      materia: g.course?.subject?.nombre || 'Desconocida',
-      u1: g.parcial1?.toString() || '---',
-      u2: g.parcial2?.toString() || '---',
-      u3: g.parcial3?.toString() || '---',
-      u4: '---',
-      u5: '---',
-      final: g.promedioFinal?.toString() || '---',
-    }));
+
+    // 1. Agrupamos por nombre de materia para eliminar duplicados
+    const materiasMap = new Map();
+
+    grades.forEach((g) => {
+      const nombreMateria = g.course?.subject?.nombre || 'Desconocida';
+
+      // Obtenemos la boleta que ya teníamos guardada (si existe)
+      const currentBest = materiasMap.get(nombreMateria);
+
+      // Calculamos un "puntaje" sumando todo para saber cuál boleta tiene datos reales
+      const scoreActual = Number(g.promedioFinal) + Number(g.parcial1) + Number(g.parcial2) + Number(g.parcial3);
+
+      const scorePrevio = currentBest
+        ? (Number(currentBest.promedioFinal) + Number(currentBest.parcial1) + Number(currentBest.parcial2) + Number(currentBest.parcial3))
+        : -1;
+
+      // REGLA: Si es la primera vez que la vemos, O si la actual tiene más datos que la anterior -> La guardamos
+      if (!currentBest || scoreActual > scorePrevio) {
+        materiasMap.set(nombreMateria, g);
+      }
+    });
+
+    // 2. Convertimos el Map a Array y aplicamos el formato visual
+    return Array.from(materiasMap.values()).map((g: any) => {
+      // Cálculo dinámico si el final es 0
+      let finalVal = Number(g.promedioFinal || 0);
+
+      // Si el final es 0 pero tiene parciales, calculamos el promedio
+      if (finalVal === 0 && (Number(g.parcial1) > 0 || Number(g.parcial2) > 0 || Number(g.parcial3) > 0)) {
+        finalVal = (Number(g.parcial1 || 0) + Number(g.parcial2 || 0) + Number(g.parcial3 || 0)) / 3;
+      }
+
+      return {
+        materia: g.course?.subject?.nombre || 'Desconocida',
+        u1: Number(g.parcial1 || 0).toFixed(1),
+        u2: Number(g.parcial2 || 0).toFixed(1),
+        u3: Number(g.parcial3 || 0).toFixed(1),
+        u4: '-',
+        u5: '-',
+        final: finalVal.toFixed(1),
+      };
+    });
   }
 
   async getAcademicHistory(studentId: string) {
@@ -377,7 +447,13 @@ export class AcademicService {
       const p1 = Number(item.parcial1) || 0;
       const p2 = Number(item.parcial2) || 0;
       const p3 = Number(item.parcial3) || 0;
-      const fin = Number(item.final) || 0;
+
+      // [CORRECCIÓN]: Si no envían final, lo calculamos
+      let fin = Number(item.final) || 0;
+      if (fin === 0 && (p1 > 0 || p2 > 0 || p3 > 0)) {
+        fin = parseFloat(((p1 + p2 + p3) / 3).toFixed(1));
+      }
+
       return await this.gradeRepo.update(item.id, {
         parcial1: p1, parcial2: p2, parcial3: p3, promedioFinal: fin, extraordinario: null,
       });
@@ -468,5 +544,20 @@ export class AcademicService {
       rendimientoMateria: [], totalEstudiantes: 0, estudiantesBajoRendimiento: 0,
       materiasImpartidas: 0, gruposAsignados: 0, estudiantesAsistenciaCritica: 0,
     };
+  }
+
+  async getStudentPeriods(userId: string) {
+    const enrollments = await this.enrollmentRepo.find({
+      where: { student: { user: { id: userId } } },
+      relations: ['group', 'group.period'],
+      order: { group: { period: { fechaInicio: 'DESC' } } } // Los más recientes primero
+    });
+
+    // Extraemos los nombres de periodos únicos (ej: ["2025-1", "2024-2"])
+    const uniquePeriods = enrollments
+      .map(e => e.group?.period?.nombre)
+      .filter((value, index, self) => value && self.indexOf(value) === index);
+
+    return uniquePeriods;
   }
 }

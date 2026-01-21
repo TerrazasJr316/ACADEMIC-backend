@@ -196,4 +196,9 @@ export class AcademicController {
   getStudentProfileData(@Param('userId') userId: string) {
     return this.academicService.getStudentProfile(userId);
   }
+
+  @Get('my-periods/:studentId')
+  getMyPeriods(@Param('studentId') studentId: string) {
+    return this.academicService.getStudentPeriods(studentId);
+  }
 }
