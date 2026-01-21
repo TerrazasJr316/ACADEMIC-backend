@@ -98,6 +98,17 @@ export class AdminController {
     return await this.adminService.deleteSubject(id);
   }
 
+  // ✅ AQUÍ AGREGUÉ LO QUE FALTABA (SOLUCIONA EL 404)
+  @Get('planes-estudio')
+  async getPlanes(@Request() req) {
+    return await this.adminService.getPlanes(req.user.schoolId);
+  }
+
+  @Post('planes-estudio')
+  async createPlan(@Body() dto: any, @Request() req) {
+    return await this.adminService.createPlan(dto, req.user.schoolId);
+  }
+
   @Get('usuarios/buscar')
   async searchUsers(@Query('q') query: string, @Request() req) {
     return await this.adminService.searchAllUsers(query, req.user.schoolId);
