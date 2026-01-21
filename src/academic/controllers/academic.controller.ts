@@ -57,16 +57,14 @@ export class AcademicController {
   getMyGrades(@Param('studentId') studentId: string, @Query('periodo') periodo: string) {
     return this.academicService.getStudentGradesByPeriod(studentId, periodo || '2025-1');
   }
-
-<<<<<<< HEAD
-  @ApiOperation({ summary: 'Consultar historial de asistencias' })
-=======
+  
+  @ApiOperation({ summary: 'Consultar historial académico completo' })
   @Get('my-academic-history/:studentId')
   getAcademicHistory(@Param('studentId') studentId: string) {
     return this.academicService.getAcademicHistory(studentId);
   }
 
->>>>>>> 56770a7f9bfbcefffe294f89f60d85ffd9b9843d
+  @ApiOperation({ summary: 'Consultar historial de asistencias' })
   @Get('my-attendance/:studentId')
   getMyAttendance(@Param('studentId') studentId: string) {
     return this.academicService.getStudentAttendance(studentId);

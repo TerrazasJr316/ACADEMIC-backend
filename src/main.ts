@@ -4,10 +4,13 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
+  // 1. Crear la aplicación
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
+  // 2. Pipes globales
   app.useGlobalPipes(new ValidationPipe());
 
+  // 3. Habilitar CORS (CRÍTICO para que el frontend no se bloquee)
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
@@ -15,20 +18,20 @@ async function bootstrap() {
     credentials: true,
   });
 
-<<<<<<< HEAD
+  // 4. Configurar Swagger
   const config = new DocumentBuilder()
     .setTitle('API Sistema Escolar SaaS')
-    .setDescription('Documentación de la API para gestión de escuelas, alumnos y maestros')
+    .setDescription('Documentación de la API')
     .setVersion('1.0')
     .addBearerAuth()
-    .build();;
+    .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-=======
->>>>>>> 56770a7f9bfbcefffe294f89f60d85ffd9b9843d
+  // 5. Iniciar el servidor
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
   console.log(`🚀 Servidor corriendo en: http://localhost:3000`);
 }
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();
