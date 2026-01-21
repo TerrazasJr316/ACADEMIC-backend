@@ -16,7 +16,8 @@ import { Course } from '../academic/entities/course.entity';
 import { School } from '../tenants/entities/school.entity';
 import { InternalMessage } from '../communications/entities/internal-message.entity';
 import { GradeReport } from '../academic/entities/grade-report.entity';
-import { AttendanceDetail } from '../academic/entities/attendance-detail.entity'; // ✅ Importación agregada
+import { AttendanceDetail } from '../academic/entities/attendance-detail.entity';
+import { Schedule } from '../academic/entities/schedule.entity'; // ✅ AGREGADO
 
 import { AuthModule } from '../auth/auth.module';
 import { AcademicModule } from '../academic/academic.module';
@@ -38,7 +39,8 @@ import { AcademicModule } from '../academic/academic.module';
       Subject,
       Course,
       GradeReport,
-      AttendanceDetail, // ✅ AGREGADO: Esto soluciona el error "UnknownDependenciesException"
+      AttendanceDetail,
+      Schedule, // ✅ AGREGADO: Esto permite que AdminService use el repositorio de horarios
     ]),
   ],
   controllers: [AdminController],
