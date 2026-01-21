@@ -66,22 +66,48 @@ export class AcademicService {
 
     const groupIds = validEnrollments.map((e) => e.group.id);
 
-    // BUSCAMOS LOS CURSOS Y AGREGAMOS LA RELACIÓN 'group'
     const courses = await this.courseRepo.find({
       where: { group: { id: In(groupIds) } },
-      relations: ['subject', 'teacher', 'teacher.user', 'schedules', 'group'], // <--- AGREGADO 'group'
+      relations: ['subject', 'teacher', 'teacher.user', 'schedules', 'group'],
     });
 
-    return courses.map((c) => ({
-      id: c.id,
-      materia: c.subject?.nombre || 'Sin Nombre',
-      profesor: c.teacher?.user?.fullName || 'Por asignar',
-      semestre: c.group?.semestre || 1, // <--- NUEVO CAMPO: Extraemos el semestre del grupo
-      horarios: c.schedules?.map((s) => ({
+    // --- LÓGICA DE FUSIÓN ---
+    // Usamos un Mapa para agrupar materias por su nombre
+    const materiasMap = new Map<string, any>();
+
+    courses.forEach((c) => {
+      const nombreMateria = c.subject?.nombre || 'Sin Nombre';
+
+      // Formateamos los horarios de este curso específico
+      const nuevosHorarios = c.schedules?.map((s) => ({
         dia: s.diaSemana,
         hora: `${s.horaInicio.toString().slice(0, 5)} - ${s.horaFin.toString().slice(0, 5)}`,
-      })) || [],
-    }));
+      })) || [];
+
+      if (materiasMap.has(nombreMateria)) {
+        // CASO A: Ya existe la materia en la lista -> FUSIONAMOS
+        const existente = materiasMap.get(nombreMateria);
+
+        // 1. Combinamos los horarios
+        existente.horarios = [...existente.horarios, ...nuevosHorarios];
+
+        // 2. Opcional: Si el profesor es diferente, podrías concatenarlo, 
+        // pero por ahora mantenemos el principal para no ensuciar la UI.
+
+      } else {
+        // CASO B: Es la primera vez que vemos esta materia -> CREAMOS
+        materiasMap.set(nombreMateria, {
+          id: c.id,
+          materia: nombreMateria,
+          profesor: c.teacher?.user?.fullName || 'Por asignar',
+          semestre: c.group?.semestre || 1,
+          horarios: nuevosHorarios
+        });
+      }
+    });
+
+    // Convertimos el mapa de vuelta a un array para el Frontend
+    return Array.from(materiasMap.values());
   }
 
   // =================================================================
