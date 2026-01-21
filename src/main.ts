@@ -18,10 +18,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-<<<<<<< HEAD
-=======
-  // 4. Configurar Swagger
->>>>>>> 8c69efff30489cc7dc90da693eaa076b813ae660
   const config = new DocumentBuilder()
     .setTitle('API Sistema Escolar SaaS')
     .setDescription('Documentación de la API')
@@ -32,10 +28,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-<<<<<<< HEAD
-=======
-  // 5. Iniciar el servidor
->>>>>>> 8c69efff30489cc7dc90da693eaa076b813ae660
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
   console.log(`🚀 Servidor corriendo en: http://localhost:3000`);
 }
