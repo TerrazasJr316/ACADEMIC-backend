@@ -1,7 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common'; 
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+
+// Entidades necesarias
 import { User } from '../users/entities/user.entity';
 import { StudentProfile } from '../student/entities/student-profile.entity';
 import { TeacherProfile } from '../teacher/entities/teacher-profile.entity';
@@ -13,12 +15,16 @@ import { Subject } from '../academic/entities/subject.entity';
 import { Course } from '../academic/entities/course.entity';
 import { School } from '../tenants/entities/school.entity';
 import { InternalMessage } from '../communications/entities/internal-message.entity';
+import { GradeReport } from '../academic/entities/grade-report.entity';
+import { AttendanceDetail } from '../academic/entities/attendance-detail.entity'; // ✅ Importación agregada
 
 import { AuthModule } from '../auth/auth.module';
+import { AcademicModule } from '../academic/academic.module';
 
 @Module({
   imports: [
     AuthModule,
+    forwardRef(() => AcademicModule),
     TypeOrmModule.forFeature([
       User,
       AdminProfile, 
@@ -31,6 +37,8 @@ import { AuthModule } from '../auth/auth.module';
       InternalMessage,
       Subject,
       Course,
+      GradeReport,
+      AttendanceDetail, // ✅ AGREGADO: Esto soluciona el error "UnknownDependenciesException"
     ]),
   ],
   controllers: [AdminController],

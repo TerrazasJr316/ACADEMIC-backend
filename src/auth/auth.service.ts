@@ -54,24 +54,28 @@ export class AuthService {
 
     const payload = { sub: user.id, type: 'recovery' };
     
+    // Generamos token valido por 15 minutos
     const token = this.jwtService.sign(payload, { 
       expiresIn: '15m', 
       secret: 'CLAVE_SECRETA_MAESTRA_12345' 
     });
 
+    // ✅ CORRECCIÓN: La URL debe apuntar a la ruta '/reset-password' de tu Frontend (Vite)
     return { 
       message: 'Correo de recuperación generado', 
-      link: `http://localhost:5173/recovery?token=${token}` 
+      link: `http://localhost:5173/reset-password?token=${token}` 
     };
   }
 
   async resetPassword(token: string, newPassword: string) {
     try {
+      // Verificamos el token con la misma clave secreta
       const payload = this.jwtService.verify(token, { secret: 'CLAVE_SECRETA_MAESTRA_12345' });
       const user = await this.userRepository.findOne({ where: { id: payload.sub } });
       
       if (!user) throw new NotFoundException('Usuario no encontrado');
 
+      // Encriptamos la nueva contraseña
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(newPassword.trim(), salt);
       await this.userRepository.save(user);

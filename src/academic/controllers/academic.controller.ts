@@ -1,23 +1,7 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  UseGuards,
-  Request,
-  Patch,
-  Put,
-  Query,
-} from '@nestjs/common';
-import {
-  AcademicService,
-  GradeInput,
-  UpdateProfileDto,
-} from '../service/academic.service';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Put, Query } from '@nestjs/common';
+import { AcademicService, GradeInput } from '../service/academic.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../auth/roles.guard';
-
 import {
   ApiTags,
   ApiOperation,
@@ -28,22 +12,21 @@ import {
   ApiResponse
 } from '@nestjs/swagger';
 
-interface RequestWithUser {
-  user: {
-    userId: string;
-    email: string;
-    role: string;
-  };
-}
+// Interfaz para el tipado de la petición
+interface RequestWithUser { user: { userId: string; email: string; role: string; }; }
 
-@ApiTags('Módulo Académico')
+@ApiTags('Academic')
 @ApiBearerAuth()
 @Controller('academic')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class AcademicController {
   constructor(private readonly academicService: AcademicService) { }
 
-  @ApiOperation({ summary: 'Obtener cursos de un estudiante', description: 'Devuelve la lista de materias inscritas.' })
+  // =================================================================
+  //  SECCIÓN DE ESTUDIANTES
+  // =================================================================
+
+  @ApiOperation({ summary: 'Obtener cursos de un estudiante' })
   @ApiParam({ name: 'studentId', description: 'UUID del estudiante' })
   @Get('my-courses/:studentId')
   getMyCourses(@Param('studentId') studentId: string) {
@@ -52,13 +35,11 @@ export class AcademicController {
 
   @ApiOperation({ summary: 'Obtener calificaciones por periodo' })
   @ApiParam({ name: 'studentId', description: 'UUID del estudiante' })
-  @ApiQuery({ name: 'periodo', required: false, example: '2025-1', description: 'Filtrar por ciclo escolar' })
+  @ApiQuery({ name: 'periodo', required: false })
   @Get('my-grades/:studentId')
   getMyGrades(@Param('studentId') studentId: string, @Query('periodo') periodo: string) {
     return this.academicService.getStudentGradesByPeriod(studentId, periodo || '2025-1');
   }
-  @ApiOperation({ summary: 'Consultar historial de asistencias' })
-
 
   @ApiOperation({ summary: 'Consultar historial académico completo' })
   @Get('my-academic-history/:studentId')
@@ -72,83 +53,87 @@ export class AcademicController {
     return this.academicService.getStudentAttendance(studentId);
   }
 
-  @ApiOperation({ summary: 'Carga Académica del Profesor', description: 'Materias asignadas al profesor logueado.' })
-  @Get('teacher-load')
-  getTeacherLoad(@Request() req: RequestWithUser) {
-    return this.academicService.getTeacherLoad(req.user.userId);
+  @ApiOperation({ summary: 'Resumen del dashboard del estudiante' })
+  @Get('dashboard/summary/:studentId')
+  getDashboardSummary(@Param('studentId') studentId: string) {
+    return this.academicService.getStudentDashboardSummary(studentId);
   }
 
-  @ApiOperation({ summary: 'Estadísticas del Profesor' })
+  @ApiOperation({ summary: 'Obtener periodos cursados por el estudiante' })
+  @Get('my-periods/:studentId')
+  getMyPeriods(@Param('studentId') studentId: string) {
+    return this.academicService.getStudentPeriods(studentId);
+  }
+
+  // =================================================================
+  //  SECCIÓN DE DOCENTES / PERFILES
+  // =================================================================
+
+  @ApiOperation({ summary: 'Obtener perfil del usuario actual (Docente)' })
+  @Get('profile')
+  async getProfile(@Request() req: RequestWithUser) {
+    const profile = await this.academicService.getProfile(req.user.userId);
+    if (!profile) return null;
+    const profileData = JSON.parse(JSON.stringify(profile));
+    const idRef = profileData.id || profileData.user?.id || req.user.userId;
+    const claveGenerada = idRef.substring(0, 8).toUpperCase();
+    return { 
+      ...profileData, 
+      clave: profileData.claveEmpleado || claveGenerada, 
+      nombre: profileData.user?.fullName || profileData.nombre 
+    };
+  }
+
+  @ApiOperation({ summary: 'Actualizar perfil (Docente o Admin editando docente)' })
+  @Put(['profile', 'profile/:id']) 
+  async updateProfile(
+    @Request() req: RequestWithUser, 
+    @Body() body: any, 
+    @Param('id') id?: string
+  ) {
+    const targetId = id || req.user.userId;
+    console.log(`[DEBUG] Actualizando perfil para ID: ${targetId}`);
+    return this.academicService.updateProfile(targetId, body);
+  }
+
+  @ApiOperation({ summary: 'Estadísticas del docente' })
   @Get('stats')
   getStats(@Request() req: RequestWithUser) {
     return this.academicService.getTeacherStats(req.user.userId);
   }
-  @ApiOperation({ summary: 'Grupos asignados al Profesor' })
+
+  @ApiOperation({ summary: 'Carga académica del docente' })
+  @Get('teacher-load')
+  getTeacherLoad(@Request() req: RequestWithUser) { 
+    return this.academicService.getTeacherLoad(req.user.userId); 
+  }
+
+  @ApiOperation({ summary: 'Grupos asignados al docente' })
   @Get('groups')
-  getGroups(@Request() req: RequestWithUser) {
-    return this.academicService.getTeacherGroups(req.user.userId);
+  getGroups(@Request() req: RequestWithUser) { 
+    return this.academicService.getTeacherGroups(req.user.userId); 
   }
 
-  @ApiOperation({ summary: 'Obtener lista de alumnos para calificar' })
-  @ApiParam({ name: 'courseId', description: 'ID del curso/materia' })
+  // =================================================================
+  //  CALIFICACIONES Y MENSAJERÍA
+  // =================================================================
+
+  @ApiOperation({ summary: 'Lista de alumnos para calificar' })
   @Get('grades/list/:courseId')
-  getGradesList(@Param('courseId') courseId: string) {
-    return this.academicService.getStudentsForGrading(courseId);
+  getGradesList(@Param('courseId') courseId: string) { 
+    return this.academicService.getStudentsForGrading(courseId); 
   }
 
-  @ApiOperation({ summary: 'Guardar calificaciones (Captura)' })
-  @ApiBody({
-    description: 'Array de calificaciones',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          studentId: { type: 'string' },
-          grade: { type: 'number' },
-          feedback: { type: 'string' }
-        }
-      }
-    }
-  })
+  @ApiOperation({ summary: 'Capturar calificaciones' })
   @Post('grades/capture/:courseId')
-  saveGrades(@Param('courseId') courseId: string, @Body() grades: any[]) {
-    return this.academicService.saveGrades(courseId, grades as GradeInput[]);
+  saveGrades(@Param('courseId') courseId: string, @Body() grades: any[]) { 
+    return this.academicService.saveGrades(courseId, grades as GradeInput[]); 
   }
 
-  @ApiOperation({ summary: 'Obtener alumnos para pase de lista' })
-  @Get('attendance/students/:groupId')
-  getStudentsForAttendance(@Param('groupId') groupId: string) {
-    return this.academicService.getStudentsForAttendance(groupId);
-  }
-
-  @ApiOperation({ summary: 'Guardar asistencia en lote' })
-  @ApiBody({ schema: { type: 'object', properties: { groupId: { type: 'string' }, date: { type: 'string' }, students: { type: 'array' } } } })
-  @Post('attendance')
-  saveAttendance(@Body() body: any) {
-    return this.academicService.saveAttendanceBatch(body);
-  }
-
-  @ApiOperation({ summary: 'Obtener perfil del usuario logueado' })
-  @Get('profile')
-  getProfile(@Request() req: RequestWithUser) {
-    return this.academicService.getProfile(req.user.userId);
-  }
-
-  @ApiOperation({ summary: 'Actualizar perfil' })
-  @ApiBody({ description: 'Datos actualizables del perfil', schema: { example: { phone: '555-1234', address: 'Calle Falsa 123' } } })
-  @Put('profile')
-  updateProfile(@Request() req: RequestWithUser, @Body() body: any) {
-    return this.academicService.updateProfile(
-      req.user.userId,
-      body as UpdateProfileDto,
-    );
-  }
-
-  @ApiOperation({ summary: 'Bandeja de entrada (Mensajes)' })
+  @ApiOperation({ summary: 'Bandeja de entrada' })
   @Get('messages/inbox')
-  getInbox(@Request() req: RequestWithUser) {
-    return this.academicService.getInbox(req.user.userId);
+  getInbox(@Request() req: RequestWithUser) { 
+    return this.academicService.getInbox(req.user.userId); 
   }
 
   @ApiOperation({ summary: 'Mensajes enviados' })
@@ -158,47 +143,14 @@ export class AcademicController {
   }
 
   @ApiOperation({ summary: 'Enviar mensaje nuevo' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        to: { type: 'string', description: 'ID del destinatario' },
-        subject: { type: 'string' },
-        message: { type: 'string' }
-      }
-    }
-  })
   @Post('messages/send')
-  sendMessage(
-    @Request() req: RequestWithUser,
-    @Body() body: { to: string; subject: string; message: string },
-  ) {
-    return this.academicService.sendMessage(
-      req.user.userId,
-      body.to,
-      body.subject,
-      body.message,
-    );
+  sendMessage(@Request() req: RequestWithUser, @Body() body: { to: string; subject: string; message: string }) {
+    return this.academicService.sendMessage(req.user.userId, body.to, body.subject, body.message);
   }
 
   @ApiOperation({ summary: 'Marcar mensaje como leído' })
   @Patch('messages/read/:id')
-  readMessage(@Param('id') id: string) {
-    return this.academicService.markMessageRead(id);
-  }
-
-  @Get('dashboard/summary/:studentId')
-  getDashboardSummary(@Param('studentId') studentId: string) {
-    return this.academicService.getStudentDashboardSummary(studentId);
-  }
-
-  @Get('student-profile/:userId')
-  getStudentProfileData(@Param('userId') userId: string) {
-    return this.academicService.getStudentProfile(userId);
-  }
-
-  @Get('my-periods/:studentId')
-  getMyPeriods(@Param('studentId') studentId: string) {
-    return this.academicService.getStudentPeriods(studentId);
+  readMessage(@Param('id') id: string) { 
+    return this.academicService.markMessageRead(id); 
   }
 }

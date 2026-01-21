@@ -15,7 +15,8 @@ class ForgotPasswordDto {
 // DTO para Cambiar Contraseña
 class ResetPasswordDto {
   token: string;
-  newPassword: string;
+  // ✅ CAMBIO: El frontend envía 'password', así que lo llamamos igual aquí
+  password: string; 
 }
 
 @Controller('auth')
@@ -36,17 +37,18 @@ export class AuthController {
     return this.authService.login(user);
   }
 
-  // 👇 1. SOLICITUD: El usuario envía su correo
+  // 👇 1. SOLICITUD
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() body: ForgotPasswordDto) {
     return this.authService.requestPasswordReset(body.email);
   }
 
-  // 👇 2. RESTABLECIMIENTO: El usuario envía el token y la nueva clave
+  // 👇 2. RESTABLECIMIENTO
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() body: ResetPasswordDto) {
-    return this.authService.resetPassword(body.token, body.newPassword);
+    // Pasamos body.password que es lo que manda el front
+    return this.authService.resetPassword(body.token, body.password);
   }
 }

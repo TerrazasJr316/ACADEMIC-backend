@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Patch, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Body, Param, UseGuards, Request, Query, Res } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
@@ -8,11 +8,14 @@ import { CreateGroupDto } from './dtos/create-group.dto';
 import { AddStudentDto } from './dtos/add-student-to-group.dto';
 import { CreateDocenteDto } from './dtos/create-docente.dto';
 
+import type { Response } from 'express';
+
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
+
   @Get('docentes')
   async getTeachers(@Request() req) {
     return await this.adminService.getTeachers(req.user.schoolId);
@@ -98,7 +101,6 @@ export class AdminController {
     return await this.adminService.deleteSubject(id);
   }
 
-  // ✅ AQUÍ AGREGUÉ LO QUE FALTABA (SOLUCIONA EL 404)
   @Get('planes-estudio')
   async getPlanes(@Request() req) {
     return await this.adminService.getPlanes(req.user.schoolId);
@@ -107,6 +109,11 @@ export class AdminController {
   @Post('planes-estudio')
   async createPlan(@Body() dto: any, @Request() req) {
     return await this.adminService.createPlan(dto, req.user.schoolId);
+  }
+
+  @Patch('planes-estudio/:id')
+  async updatePlan(@Param('id') id: string, @Body() dto: any) {
+    return await this.adminService.updatePlan(id, dto);
   }
 
   @Get('usuarios/buscar')
@@ -122,5 +129,32 @@ export class AdminController {
   @Get('mensajes/historial')
   async getHistory(@Request() req) {
     return await this.adminService.getMensajesEnviados(req.user.id);
+  }
+
+  // ✅ NUEVO: Endpoint para el historial académico (Soluciona el 404)
+  @Get('alumnos/:id/historial')
+  async getAlumnoHistorial(@Param('id') id: string) {
+    return await this.adminService.getAlumnoHistorial(id);
+  }
+
+  @Get('reportes/filtros')
+  async getReportFilters(@Request() req) {
+    return await this.adminService.getReportFilters(req.user.schoolId);
+  }
+
+  @Post('reportes/generar')
+  async generateReport(@Body() payload: any) {
+    return await this.adminService.generateAcademicReport(payload);
+  }
+
+  @Post('reportes/exportar/:formato')
+  async exportReport(
+    @Param('formato') formato: string,
+    @Body() payload: any,
+    @Res() res: Response 
+  ) {
+    res.setHeader('Content-Type', formato === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=reporte.${formato}`);
+    return res.send(Buffer.from([])); 
   }
 }

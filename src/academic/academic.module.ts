@@ -1,9 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AcademicService } from './service/academic.service';
 import { AcademicController } from './controllers/academic.controller';
+import { AdminModule } from '../admin/admin.module';
 
 import { TeacherProfile } from '../teacher/entities/teacher-profile.entity';
+import { InternalMessage } from '../communications/entities/internal-message.entity';
+import { User } from '../users/entities/user.entity';
 import { Course } from './entities/course.entity';
 import { GradeCard } from './entities/grade-card.entity';
 import { AttendanceDetail } from './entities/attendance-detail.entity';
@@ -12,23 +15,14 @@ import { Enrollment } from './entities/enrollment.entity';
 import { Subject } from './entities/subject.entity';
 import { Schedule } from './entities/schedule.entity';
 import { AcademicPeriod } from './entities/academic-period.entity';
-import { InternalMessage } from '../communications/entities/internal-message.entity';
-import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
+    forwardRef(() => AdminModule),
     TypeOrmModule.forFeature([
-      TeacherProfile,
-      Course,
-      GradeCard,
-      AttendanceDetail,
-      Group,
-      Enrollment,
-      Subject,
-      Schedule,
-      AcademicPeriod,
-      InternalMessage,
-      User,
+      TeacherProfile, Course, GradeCard, AttendanceDetail, 
+      Group, Enrollment, Subject, Schedule, AcademicPeriod, 
+      InternalMessage, User
     ]),
   ],
   controllers: [AcademicController],
